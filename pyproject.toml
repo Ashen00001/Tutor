@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
   "anki>=25.9",
   "mcp>=1.27,<2",
+  "httpx>=0.27",
 ]
 
 [project.scripts]
@@ -17,3 +18,6 @@ anki-jp-tutor = "anki_jp_tutor.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+anki_jp_tutor = ["web/*"]

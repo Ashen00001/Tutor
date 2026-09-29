@@ -260,7 +260,11 @@ class TutorStore:
             return "Weakest first:\n" + "\n".join(out)
 
     # --------------------------------------------------------------- session
-    def start_session(self, new_words: int = 3, review_limit: int = 12, auto_unlock: bool = True) -> str:
+    # Each operation has a *_data() form (structured, used by the web app) and a text
+    # form (compact, used by the MCP tools so the model reads as few tokens as possible).
+
+    def start_session_data(self, new_words: int = 3, review_limit: int = 12,
+                           auto_unlock: bool = True) -> dict:
         with self.lock:
             self.ensure_setup()
             s = Session()
@@ -271,18 +275,23 @@ class TutorStore:
             review = review[:review_limit]
             s.queue.extend({"kind": "quiz", "cid": cid} for cid in review)
 
-            unlocked = ""
+            unlocked: int | None = None
             new_cids = self._new_cards(new_words)
             if not new_cids and not review and auto_unlock:
                 added, batches = self._unlock(1)
                 if added:
-                    unlocked = f"(no reviews or new cards were waiting, so batch {batches[0]} was unlocked)\n"
+                    unlocked = batches[0]
                     new_cids = self._new_cards(new_words)
             self._enqueue_new(s, new_cids, front=False)
             self.session = s
-            stats = self._stats_line()
-            first = self._pop_next()
-        return f"{content.TUTOR_RULES}\nSTATS: {stats}\n{unlocked}\n{first}"
+            return {"stats": self._stats(), "unlocked": unlocked, "item": self._pop_next()}
+
+    def start_session(self, new_words: int = 3, review_limit: int = 12, auto_unlock: bool = True) -> str:
+        d = self.start_session_data(new_words, review_limit, auto_unlock)
+        unlocked = (f"(no reviews or new cards were waiting, so batch {d['unlocked']} was unlocked)\n"
+                    if d["unlocked"] else "")
+        return (f"{content.TUTOR_RULES}\nSTATS: {self._stats_text(d['stats'])}\n{unlocked}\n"
+                f"{self._fmt_item(d['item'])}")
 
     def _new_cards(self, max_words: int) -> list[int]:
         if max_words <= 0:
@@ -315,34 +324,52 @@ class TutorStore:
         else:
             s.queue.extend(items)
 
-    def _pop_next(self) -> str:
+    def _pop_next(self) -> dict:
+        """Next queue item: {kind: intro, cards, first} | {kind: quiz, card, left} | {kind: empty}."""
         s = self.session
         if s is None:
-            return "No session. Call jp_start_session."
+            return {"kind": "none"}
         while s.queue:
             item = s.queue.popleft()
             if item["kind"] == "intro":
                 cards = [c for c in (self._get_card(cid) for cid in item["cids"]) if c]
                 if not cards:
                     continue
-                lines = []
-                for c in cards:
-                    v = self._view(c)
-                    lines.append(f"- {self._short(v)}" + (f" · tip: {v['note']}" if v["note"] else ""))
-                words = "\n".join(lines)
-                follow = self._pop_next()
-                plural = "word" if len(cards) == 1 else f"{len(cards)} words"
-                return (f"INTRO: teach these new {plural} in one short message, "
-                        f"then ask the first quiz below.\n{words}\n\nFIRST QUIZ:\n{follow}")
+                return {"kind": "intro", "cards": [self._view(c) for c in cards], "first": self._pop_next()}
             card = self._get_card(item["cid"])
             if card is None or card.queue < 0:
                 continue
             left = sum(1 for i in s.queue if i["kind"] == "quiz")
-            return f"NEXT ({left} more after this):\n{self._fmt(self._view(card))}"
-        return ("QUEUE EMPTY. Offer more with jp_next_batch (3 new words), "
-                "or wrap up with jp_end_session.")
+            return {"kind": "quiz", "card": self._view(card), "left": left}
+        return {"kind": "empty"}
 
-    def answer(self, card_id: int, result: str) -> str:
+    def _fmt_item(self, item: dict) -> str:
+        kind = item["kind"]
+        if kind == "intro":
+            lines = [f"- {self._short(v)}" + (f" · tip: {v['note']}" if v["note"] else "") for v in item["cards"]]
+            plural = "word" if len(item["cards"]) == 1 else f"{len(item['cards'])} words"
+            return (f"INTRO: teach these new {plural} in one short message, then ask the first quiz below.\n"
+                    + "\n".join(lines) + f"\n\nFIRST QUIZ:\n{self._fmt_item(item['first'])}")
+        if kind == "quiz":
+            return f"NEXT ({item['left']} more after this):\n{self._fmt(item['card'])}"
+        if kind == "none":
+            return "No session. Call jp_start_session."
+        return "QUEUE EMPTY. Offer more with jp_next_batch (3 new words), or wrap up with jp_end_session."
+
+    def peek_card(self, card_id: int) -> dict:
+        with self.lock:
+            card = self._get_card(card_id)
+            if card is None:
+                raise TutorError(f"Card {card_id} isn't a tutor card.")
+            return self._view(card)
+
+    def raw_example(self, card_id: int) -> str:
+        """Example sentence in Anki furigana syntax (the app renders it as <ruby>)."""
+        with self.lock:
+            c = self._get_card(card_id)
+            return c.note()["Example"] if c else ""
+
+    def answer_data(self, card_id: int, result: str) -> dict:
         with self.lock:
             card = self._get_card(card_id)
             if card is None:
@@ -355,31 +382,50 @@ class TutorStore:
                 self.session = Session()
             s = self.session
             s.log.append((card.id, result))
-            extra = ""
+            requeued = False
             if result == "again":
                 self.col.tags.bulk_add([card.nid], content.TAG_MISSED)
                 if s.requeues.get(card.id, 0) < MAX_REQUEUES:
                     s.requeues[card.id] = s.requeues.get(card.id, 0) + 1
-                    pos = min(2, len(s.queue))
-                    s.queue.insert(pos, {"kind": "quiz", "cid": card.id})
-                    extra = " · re-asking soon"
-            saved = f"saved: {v['word']} → {result} (next review {self._next_due_text(card)}){extra}"
+                    s.queue.insert(min(2, len(s.queue)), {"kind": "quiz", "cid": card.id})
+                    requeued = True
+            # Right answers in a row this session (for the app's hype lines).
+            streak = 0
+            for _, r in reversed(s.log):
+                if r == "again":
+                    break
+                streak += 1
+            saved = {"word": v["word"], "result": result, "next_review": self._next_due_text(card),
+                     "requeued": requeued, "in_a_row": streak}
             nxt = self._pop_next()
         self.on_change()
-        return f"{saved}\n{nxt}"
+        return {"saved": saved, "next": nxt}
 
-    def next_batch(self, batches: int = 1) -> str:
+    def answer(self, card_id: int, result: str) -> str:
+        d = self.answer_data(card_id, result)
+        sv = d["saved"]
+        extra = " · re-asking soon" if sv["requeued"] else ""
+        return (f"saved: {sv['word']} → {sv['result']} (next review {sv['next_review']}){extra}\n"
+                f"{self._fmt_item(d['next'])}")
+
+    def next_batch_data(self, batches: int = 1) -> dict:
         with self.lock:
             added, nums = self._unlock(batches)
             if not added:
-                return ("All starter batches are unlocked. Add words from shows/convos with jp_add_words.")
+                return {"added": [], "batches": [], "item": None}
             if self.session is None:
                 self.session = Session()
-            cids = self._cids_for_words(added)
-            self._enqueue_new(self.session, cids, front=True)
-            first = self._pop_next()
+            self._enqueue_new(self.session, self._cids_for_words(added), front=True)
+            item = self._pop_next()
         self.on_change()
-        return f"Unlocked batch {', '.join(map(str, nums))}: {', '.join(added)}\n{first}"
+        return {"added": added, "batches": nums, "item": item}
+
+    def next_batch(self, batches: int = 1) -> str:
+        d = self.next_batch_data(batches)
+        if not d["added"]:
+            return "All starter batches are unlocked. Add words from shows/convos with jp_add_words."
+        return (f"Unlocked batch {', '.join(map(str, d['batches']))}: {', '.join(d['added'])}\n"
+                f"{self._fmt_item(d['item'])}")
 
     def _unlock(self, batches: int) -> tuple[list[str], list[int]]:
         existing = self._existing_words()
@@ -430,7 +476,7 @@ class TutorStore:
         self.col.add_note(note, self._did())  # type: ignore[arg-type]
         return note.id
 
-    def add_words(self, words: list[WordInput], quiz_now: bool = True) -> str:
+    def add_words_data(self, words: list[WordInput], quiz_now: bool = True) -> dict:
         with self.lock:
             existing = self._existing_words()
             added: list[str] = []
@@ -448,16 +494,23 @@ class TutorStore:
                     continue
                 existing.add(w.word.strip())
                 added.append(w.word.strip())
-            msg = f"added: {', '.join(added) or 'none'}"
-            if skipped:
-                msg += f"\nskipped: {'; '.join(skipped)}"
+            item = None
             if added and quiz_now:
                 if self.session is None:
                     self.session = Session()
                 self._enqueue_new(self.session, self._cids_for_words(added), front=True)
-                msg += "\n" + self._pop_next()
+                item = self._pop_next()
         if added:
             self.on_change()
+        return {"added": added, "skipped": skipped, "item": item}
+
+    def add_words(self, words: list[WordInput], quiz_now: bool = True) -> str:
+        d = self.add_words_data(words, quiz_now)
+        msg = f"added: {', '.join(d['added']) or 'none'}"
+        if d["skipped"]:
+            msg += f"\nskipped: {'; '.join(d['skipped'])}"
+        if d["item"]:
+            msg += "\n" + self._fmt_item(d["item"])
         return msg
 
     def find_words(self, query: str, limit: int = 10) -> str:
@@ -490,52 +543,75 @@ class TutorStore:
                 break
         return streak
 
-    def _stats_line(self) -> str:
-        words = len(self._existing_words())
-        new = len(self._find("is:new card:1"))
-        due = len(self._find("is:due"))
-        today = self.col.db.scalar(
-            "select count() from revlog where id > ?", (self.col.sched.day_cutoff - 86400) * 1000
-        )
-        return f"{words} words ({new} not started) · {due} due · {today} answers today · streak {self._streak()}d"
+    def _stats(self) -> dict:
+        return {
+            "words": len(self._existing_words()),
+            "not_started": len(self._find("is:new card:1")),
+            "due": len(self._find("is:due")),
+            "today": self.col.db.scalar(
+                "select count() from revlog where id > ?", (self.col.sched.day_cutoff - 86400) * 1000),
+            "streak": self._streak(),
+        }
 
-    def progress(self) -> str:
+    @staticmethod
+    def _stats_text(st: dict) -> str:
+        return (f"{st['words']} words ({st['not_started']} not started) · {st['due']} due · "
+                f"{st['today']} answers today · streak {st['streak']}d")
+
+    def progress_data(self) -> dict:
         with self.lock:
             existing = self._existing_words()
-            unlocked = sum(1 for b in content.CURRICULUM if all(w["word"] in existing for w in b))
-            learning = len(self._find("(is:learn) card:1"))
-            review = len(self._find("is:review -is:learn card:1"))
-            mature = len(self._find("prop:ivl>=21 card:1"))
-            weak = self._weak(3, min_score=3.0)
-            mined = len(self.col.find_notes(self._q(f"tag:{content.TAG_MINED}")))
-            lines = [
-                self._stats_line(),
-                f"learning {learning} · in review {review} · solid (21d+) {mature}",
-                f"starter batches: {unlocked}/{len(content.CURRICULUM)} · words mined from shows: {mined}",
-            ]
-            if weak:
-                lines.append("shakiest: " + ", ".join(self._view(c)["word"] for c, _, _ in weak))
-            return "\n".join(lines)
+            d = self._stats()
+            d.update({
+                "learning": len(self._find("(is:learn) card:1")),
+                "in_review": len(self._find("is:review -is:learn card:1")),
+                "solid": len(self._find("prop:ivl>=21 card:1")),
+                "batches_unlocked": sum(1 for b in content.CURRICULUM if all(w["word"] in existing for w in b)),
+                "batches_total": len(content.CURRICULUM),
+                "mined": len(self.col.find_notes(self._q(f"tag:{content.TAG_MINED}"))),
+                "shakiest": [self._view(c)["word"] for c, _, _ in self._weak(3, min_score=3.0)],
+            })
+            return d
 
-    def end_session(self) -> str:
+    def progress(self) -> str:
+        d = self.progress_data()
+        lines = [
+            self._stats_text(d),
+            f"learning {d['learning']} · in review {d['in_review']} · solid (21d+) {d['solid']}",
+            f"starter batches: {d['batches_unlocked']}/{d['batches_total']} · words mined from shows: {d['mined']}",
+        ]
+        if d["shakiest"]:
+            lines.append("shakiest: " + ", ".join(d["shakiest"]))
+        return "\n".join(lines)
+
+    def end_session_data(self) -> dict:
         with self.lock:
             s = self.session
             self.session = None
             if s is None or not s.log:
-                return "No answers this session."
-            total = len(s.log)
+                return {"cards": 0, "answers": 0, "right_first_try": 0, "minutes": 0, "missed": []}
             first_try: dict[int, str] = {}
             for cid, r in s.log:
                 first_try.setdefault(cid, r)
-            right = sum(1 for r in first_try.values() if r != "again")
-            missed = [cid for cid, r in first_try.items() if r == "again"]
-            names = []
-            for cid in missed:
-                c = self._get_card(cid)
+            missed = []
+            for cid, r in first_try.items():
+                c = self._get_card(cid) if r == "again" else None
                 if c:
-                    names.append(self._view(c)["word"])
-            mins = max(1, round((time.time() - s.started) / 60))
-            out = (f"session: {len(first_try)} cards, {total} answers, {right}/{len(first_try)} right first try, ~{mins} min")
-            if names:
-                out += f"\nmissed: {', '.join(names)} (they'll come back first next time)"
-            return out
+                    missed.append(self._view(c)["word"])
+            return {
+                "cards": len(first_try),
+                "answers": len(s.log),
+                "right_first_try": sum(1 for r in first_try.values() if r != "again"),
+                "minutes": max(1, round((time.time() - s.started) / 60)),
+                "missed": missed,
+            }
+
+    def end_session(self) -> str:
+        d = self.end_session_data()
+        if not d["answers"]:
+            return "No answers this session."
+        out = (f"session: {d['cards']} cards, {d['answers']} answers, "
+               f"{d['right_first_try']}/{d['cards']} right first try, ~{d['minutes']} min")
+        if d["missed"]:
+            out += f"\nmissed: {', '.join(d['missed'])} (they'll come back first next time)"
+        return out

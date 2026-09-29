@@ -22,6 +22,20 @@ def to_kana(text: str) -> str:
     return _RUBY.sub(repl, text).strip()
 
 
+def to_ruby_html(text: str) -> str:
+    """' 水[みず] 飲[の]みたい。' -> '<ruby>水<rt>みず</rt></ruby><ruby>飲<rt>の</rt></ruby>みたい。' (escaped)."""
+    import html
+
+    out, pos = [], 0
+    for m in _RUBY.finditer(text):
+        out.append(html.escape(text[pos : m.start()]))
+        base, reading = m.group(1), m.group(2)
+        out.append(f"<ruby>{html.escape(base)}<rt>{html.escape(reading)}</rt></ruby>" if reading else html.escape(base))
+        pos = m.end()
+    out.append(html.escape(text[pos:]))
+    return "".join(out).strip()
+
+
 def is_all_kana(text: str) -> bool:
     return bool(_KANA.match(text))
 

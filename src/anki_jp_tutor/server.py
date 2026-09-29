@@ -14,8 +14,10 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import content
+from .ask import AskClient
 from .store import TutorError, TutorStore, WordInput
 from .sync import SyncManager
+from .webapp import register_web
 
 T = TypeVar("T")
 
@@ -39,7 +41,7 @@ class WordItem(BaseModel):
 
 
 def build_server(store: TutorStore, sync: SyncManager, *, host: str = "0.0.0.0", port: int = 8000,
-                 path: str = "/mcp") -> FastMCP:
+                 path: str = "/mcp", secret: str | None = None, ask: "AskClient | None" = None) -> FastMCP:
     mcp = FastMCP(
         name="anki-jp-tutor",
         instructions=content.SERVER_INSTRUCTIONS,
@@ -187,5 +189,8 @@ def build_server(store: TutorStore, sync: SyncManager, *, host: str = "0.0.0.0",
     @mcp.custom_route("/health", methods=["GET"])
     async def health(_: Request) -> JSONResponse:
         return JSONResponse({"ok": True})
+
+    if secret:
+        register_web(mcp, store, sync, secret, ask)
 
     return mcp

@@ -16,6 +16,7 @@ import secrets
 import sys
 from pathlib import Path
 
+from .ask import AskClient
 from .server import build_server
 from .store import TutorStore
 from .sync import SyncManager
@@ -40,7 +41,7 @@ def _secret(data: Path) -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(prog="anki_jp_tutor")
-    ap.add_argument("command", nargs="?", default="serve", choices=["serve", "login", "url"])
+    ap.add_argument("command", nargs="?", default="serve", choices=["serve", "login", "url", "app-url"])
     ap.add_argument("--stdio", action="store_true", help="serve over stdio instead of HTTP")
     args = ap.parse_args()
 
@@ -54,6 +55,9 @@ def main() -> None:
 
     if args.command == "url":
         print(f"{public}{path}")  # just the path when PUBLIC_URL isn't set
+        return
+    if args.command == "app-url":
+        print(f"{public}/app/{secret}/")
         return
 
     store = TutorStore(
@@ -106,9 +110,12 @@ def main() -> None:
 
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    log.info("Connector URL: %s%s", public or f"http://{host}:{port}", path)
-    log.info("%s", sync.status())
-    build_server(store, sync, host=host, port=port, path=path).run("streamable-http")
+    ask = AskClient.from_env(store)
+    origin = public or f"http://{host}:{port}"
+    log.info("Connector URL (Claude): %s%s", origin, path)
+    log.info("App URL (phone/browser): %s/app/%s/", origin, secret)
+    log.info("%s · ask mode: %s", sync.status(), "on" if ask else "off (set ANTHROPIC_API_KEY)")
+    build_server(store, sync, host=host, port=port, path=path, secret=secret, ask=ask).run("streamable-http")
 
 
 if __name__ == "__main__":
