@@ -3,254 +3,287 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#07080c">
-<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#f7f2ef">
+<meta name="color-scheme" content="light">
 <meta name="robots" content="noindex">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Tutor">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" data-fonts href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@500;700&display=swap">
 <title>Japanese Tutor</title>
 <style>
+/* Layout: one screen. Orb up top, the word under it, the spoken line as a quote, voice dock at the bottom. */
 :root {
-  --bg: #07080c;
-  --text: #f5f5f7;
-  --muted: rgba(245, 245, 247, .56);
-  --faint: rgba(245, 245, 247, .32);
-  --glass: rgba(255, 255, 255, .055);
-  --glass-2: rgba(255, 255, 255, .09);
-  --line: rgba(255, 255, 255, .09);
-  --ok: #34d399;
-  --close: #fbbf24;
-  --bad: #fb7185;
-  --accent: #8b8cff;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-  --font-ja: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", "Meiryo", "Noto Sans JP", system-ui, sans-serif;
-  --r: 22px;
+  color-scheme: light;
+  --bg: #f7f2ef;
+  --ink: #23150e;
+  --ink-2: #7a6961;
+  --ink-3: #b2a198;
+  --accent: #ff6a1a;
+  --accent-2: #ffa35c;
+  --accent-soft: #ffc6a0;
+  --accent-text: #c9500c;
+  --glass: rgba(255, 255, 255, .58);
+  --glass-hi: rgba(255, 255, 255, .8);
+  --glass-edge: rgba(255, 255, 255, .92);
+  --shadow: 0 10px 34px rgba(120, 58, 24, .09);
+  --ok-bg: #dff5e8; --ok: #17804a;
+  --close-bg: #fdf0d2; --close: #a45a00;
+  --bad-bg: #fde3e6; --bad: #c42a3c;
+  --font: "Urbanist", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --font-ja: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans JP", sans-serif;
   --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); }
-body { overflow: hidden; -webkit-font-smoothing: antialiased; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
-button { cursor: pointer; border: 0; background: none; }
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+button:focus-visible, input:focus-visible { outline: 3px solid rgba(255, 106, 26, .45); outline-offset: 2px; }
 [hidden] { display: none !important; }
 .ja { font-family: var(--font-ja); }
 
-#app {
-  height: 100dvh; display: flex; flex-direction: column;
-  padding: calc(var(--safe-t) + 6px) 16px calc(var(--safe-b) + 12px);
-  max-width: 640px; margin: 0 auto; position: relative;
-}
-body::before {
-  content: ""; position: fixed; inset: 0; pointer-events: none;
-  background: radial-gradient(60vmax 45vmax at 50% 28%, rgba(99, 102, 241, .13), transparent 70%),
-              radial-gradient(40vmax 30vmax at 50% 100%, rgba(236, 72, 153, .06), transparent 70%);
-}
+/* soft color washes behind the glass */
+.wash { position: fixed; inset: -10%; pointer-events: none; z-index: 0; filter: blur(50px); }
+.wash i { position: absolute; border-radius: 50%; opacity: .8; animation: drift 26s ease-in-out infinite alternate; }
+.wash .a { width: 62vmax; height: 62vmax; left: -22vmax; top: -18vmax; background: radial-gradient(circle, #ffcfb4 0%, rgba(255, 207, 180, 0) 65%); }
+.wash .b { width: 58vmax; height: 58vmax; left: -20vmax; bottom: -22vmax; background: radial-gradient(circle, #d3e3ff 0%, rgba(211, 227, 255, 0) 65%); animation-delay: -9s; }
+.wash .c { width: 56vmax; height: 56vmax; right: -24vmax; top: 22%; background: radial-gradient(circle, #ffd3df 0%, rgba(255, 211, 223, 0) 65%); animation-delay: -17s; }
+@keyframes drift { to { transform: translate(4vmax, 3vmax) scale(1.08); } }
 
-/* top bar */
-.top { display: flex; align-items: center; gap: 10px; height: 52px; position: relative; z-index: 2; }
-.brand { font-weight: 600; letter-spacing: .02em; font-size: 17px; display: flex; align-items: center; gap: 8px; }
-.brand .ja { font-weight: 600; }
-.brand i { width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, #22d3ee, #6366f1, #ec4899); box-shadow: 0 0 12px rgba(139, 140, 255, .8); }
-.chips { display: flex; gap: 6px; margin-left: auto; }
-.chip { font-size: 13px; color: var(--muted); padding: 5px 10px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.chip:empty { display: none; }
-.icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--line); transition: background .2s, transform .1s; }
-.icon-btn:hover { background: var(--glass-2); }
-.icon-btn:active { transform: scale(.94); }
-.icon-btn svg { width: 19px; height: 19px; }
-.icon-btn[aria-pressed="true"] { background: rgba(251, 113, 133, .16); border-color: rgba(251, 113, 133, .35); color: #fecdd3; }
-.progress { position: absolute; left: 0; right: 0; bottom: -2px; height: 2px; background: rgba(255, 255, 255, .05); border-radius: 2px; overflow: hidden; }
-.progress i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #22d3ee, #8b8cff, #ec4899); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+#app { position: relative; z-index: 1; height: 100dvh; max-width: 620px; margin: 0 auto; display: flex; flex-direction: column;
+  padding: calc(var(--safe-t) + 8px) 16px calc(var(--safe-b) + 14px); }
+
+/* header */
+.top { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 12px; position: relative; }
+.title { text-align: center; line-height: 1.2; min-width: 0; }
+.title .t1 { font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.title .t2 { font-size: 13px; color: var(--ink-2); font-variant-numeric: tabular-nums; min-height: 16px; }
+.glass-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--glass); border: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow); backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%); color: var(--ink); transition: transform .12s, background .2s; }
+.glass-btn:hover { background: var(--glass-hi); }
+.glass-btn:active { transform: scale(.93); }
+.glass-btn svg { width: 20px; height: 20px; }
+.glass-btn.lg { width: 56px; height: 56px; }
+.glass-btn.lg svg { width: 22px; height: 22px; }
+.glass-btn[aria-pressed="true"] { color: var(--bad); }
+.progress { position: absolute; left: 56px; right: 56px; bottom: -8px; height: 3px; border-radius: 3px; background: rgba(255, 106, 26, .1); overflow: hidden; }
+body.hero .progress { opacity: 0; }
+.progress i { display: block; height: 100%; width: 0; border-radius: 3px; background: linear-gradient(90deg, var(--accent-soft), var(--accent)); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
 
 /* stage */
-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; position: relative; z-index: 1; padding-bottom: 4vh; }
-body.compact main { justify-content: flex-start; padding-bottom: 0; }
-.stage { display: flex; flex-direction: column; align-items: center; padding-top: clamp(4px, 3vh, 28px); flex-shrink: 0; }
-.orb-btn { width: var(--orb, min(58vw, 32vh, 260px)); aspect-ratio: 1; border-radius: 50%; padding: 0; position: relative; outline: none; transition: transform .25s cubic-bezier(.2, .8, .2, 1), width .35s cubic-bezier(.2, .8, .2, 1); }
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding-top: 6px; }
+body.compact main { justify-content: flex-start; }
+.orb-btn { --orb: min(64vw, 34vh, 300px); width: var(--orb); aspect-ratio: 1; border-radius: 50%; position: relative; flex: none; outline: none;
+  transition: width .45s cubic-bezier(.2, .8, .2, 1), transform .2s; }
 .orb-btn:active { transform: scale(.97); }
-.orb-btn:focus-visible { box-shadow: 0 0 0 3px rgba(139, 140, 255, .6); }
-.orb-btn canvas { width: 145%; height: 145%; position: absolute; left: -22.5%; top: -22.5%; pointer-events: none; }
-body.compact .orb-btn { --orb: min(30vw, 18vh, 132px); }
-body.compact .view { flex: 1 1 auto; }
-.status { margin-top: 10px; font-size: 14px; color: var(--muted); min-height: 20px; letter-spacing: .01em; transition: opacity .2s; text-align: center; }
+.orb-btn:focus-visible { box-shadow: 0 0 0 4px rgba(255, 106, 26, .3); }
+.orb-btn canvas { position: absolute; width: 150%; height: 150%; left: -25%; top: -25%; pointer-events: none; }
+body.compact .orb-btn { --orb: min(34vw, 17vh, 150px); }
+body.hero .orb-btn { --orb: min(80vw, 42vh, 380px); }
+.status { font-size: 15px; font-weight: 600; color: var(--accent-text); min-height: 20px; text-align: center; letter-spacing: .01em; }
+.status.quiet { color: var(--ink-3); }
 
-.view { width: 100%; flex: 0 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: center; padding: 8px 2px 12px; scrollbar-width: none; }
+.view { width: 100%; min-height: 0; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; align-items: center; padding: 6px 2px 8px; scrollbar-width: none; }
 .view::-webkit-scrollbar { display: none; }
-.enter { animation: rise .32s cubic-bezier(.2, .8, .2, 1) both; }
+body.compact .view { flex: 1 1 auto; }
+.enter { animation: rise .34s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
-.kicker { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-top: 6px; }
-.prompt { font-size: clamp(44px, 13vw, 72px); line-height: 1.15; font-weight: 500; text-align: center; margin: 6px 0 2px; letter-spacing: .02em; word-break: keep-all; }
-.prompt.en { font-family: var(--font); font-size: clamp(32px, 9vw, 48px); font-weight: 600; letter-spacing: -.01em; }
-.sub { font-size: 20px; color: var(--muted); }
-.hint { margin-top: 10px; font-size: 16px; color: var(--accent); background: rgba(139, 140, 255, .1); border: 1px solid rgba(139, 140, 255, .25); padding: 6px 12px; border-radius: 999px; }
-.heard { margin-top: 14px; font-size: 18px; color: var(--muted); min-height: 26px; text-align: center; max-width: 90%; }
-.heard b { color: var(--text); font-weight: 500; }
+/* quiz */
+.kicker { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.prompt { font-family: var(--font-ja); font-weight: 700; font-size: clamp(48px, 14vw, 76px); line-height: 1.15; letter-spacing: .03em; text-align: center; margin-top: 4px; }
+.prompt.en { font-family: var(--font); font-weight: 700; font-size: clamp(34px, 10vw, 52px); letter-spacing: -.02em; }
+.sub { font-family: var(--font-ja); font-size: 20px; color: var(--ink-2); }
+.hint { margin-top: 10px; font-size: 16px; font-weight: 600; color: var(--accent-text); background: rgba(255, 106, 26, .08); border: 1px solid rgba(255, 106, 26, .18); padding: 6px 14px; border-radius: 999px; }
+.textlink { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--ink-3); padding: 6px 10px; border-radius: 10px; }
+.textlink:hover { color: var(--ink-2); }
 
-.welcome { text-align: center; margin-top: 8px; }
-.welcome h1 { font-size: 30px; font-weight: 650; letter-spacing: -.02em; margin: 8px 0 6px; }
-.welcome p { color: var(--muted); margin: 0; font-size: 16px; line-height: 1.5; }
+/* the spoken line, as a quote that lights up word by word */
+.line { max-width: 30ch; margin: 12px auto 0; text-align: center; font-size: 18px; line-height: 1.45; font-weight: 500; color: var(--ink-3); min-height: 26px; text-wrap: balance; }
+.line .w { transition: color .18s; }
+.line .w.on { color: var(--ink); }
+.line.heard { color: var(--ink); font-weight: 600; }
 
-/* cards */
-.panel { width: 100%; background: var(--glass); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; backdrop-filter: blur(24px) saturate(140%); -webkit-backdrop-filter: blur(24px) saturate(140%); }
-.fb { margin-top: 6px; }
-.verdict { display: flex; align-items: center; gap: 10px; }
-.pill { font-size: 13px; font-weight: 600; padding: 5px 11px; border-radius: 999px; letter-spacing: .01em; }
-.pill.correct { background: rgba(52, 211, 153, .14); color: var(--ok); }
-.pill.close { background: rgba(251, 191, 36, .14); color: var(--close); }
-.pill.wrong { background: rgba(251, 113, 133, .14); color: var(--bad); }
-.verdict .line { color: var(--muted); font-size: 15px; }
-.ans { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
-.ans .big { font-size: 34px; font-weight: 500; }
-.ans .small { font-size: 18px; color: var(--muted); }
-.ans .say { margin-left: auto; }
-.mean { margin-top: 4px; font-size: 17px; }
-.mean .ro { color: var(--muted); }
-.tip { margin-top: 12px; font-size: 15px; line-height: 1.45; color: rgba(245, 245, 247, .82); }
-.ex { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
-.ex .jp { font-size: 20px; line-height: 1.9; }
-.ex .en { color: var(--muted); font-size: 14px; }
-ruby rt { font-size: .5em; color: var(--muted); }
-.src { margin-top: 8px; font-size: 12px; color: var(--faint); }
-.row { display: flex; gap: 10px; margin-top: 16px; }
+/* glass cards */
+.panel { width: 100%; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 28px; padding: 20px; box-shadow: var(--shadow);
+  backdrop-filter: blur(22px) saturate(150%); -webkit-backdrop-filter: blur(22px) saturate(150%); }
+.pill { font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 999px; }
+.pill.correct { background: var(--ok-bg); color: var(--ok); }
+.pill.close { background: var(--close-bg); color: var(--close); }
+.pill.wrong { background: var(--bad-bg); color: var(--bad); }
+.ans { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.ans .big { font-family: var(--font-ja); font-weight: 700; font-size: 36px; line-height: 1.1; }
+.ans .small { font-family: var(--font-ja); font-size: 18px; color: var(--ink-2); }
+.ans .speak { margin-left: auto; }
+.mean { margin-top: 6px; font-size: 18px; font-weight: 600; }
+.mean .ro { color: var(--ink-2); font-weight: 500; }
+.said { margin-top: 6px; font-size: 13px; color: var(--ink-3); }
+.tip { margin-top: 12px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.ex { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255, 106, 26, .1); }
+.ex .jp { font-family: var(--font-ja); font-size: 21px; line-height: 1.9; }
+.ex .en { font-size: 14px; color: var(--ink-2); }
+ruby rt { font-size: .5em; color: var(--ink-2); }
+.src { margin-top: 8px; font-size: 12px; color: var(--ink-3); }
+.row { display: flex; gap: 10px; margin-top: 18px; }
 .row > * { flex: 1; }
 
-.btn { height: 48px; border-radius: 999px; font-weight: 600; font-size: 16px; padding: 0 20px; transition: transform .1s, background .2s, opacity .2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn { height: 52px; border-radius: 999px; font-weight: 700; font-size: 16px; padding: 0 22px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: transform .12s, filter .2s, opacity .2s; }
 .btn:active { transform: scale(.97); }
-.btn.primary { background: #f5f5f7; color: #0b0c10; }
-.btn.primary:hover { background: #fff; }
-.btn.ghost { background: var(--glass); border: 1px solid var(--line); color: var(--text); }
-.btn.ghost:hover { background: var(--glass-2); }
-.btn.small { height: 38px; font-size: 14px; padding: 0 14px; font-weight: 500; }
-.btn[disabled] { opacity: .45; pointer-events: none; }
-.link { color: var(--muted); font-size: 14px; padding: 8px 10px; border-radius: 10px; }
-.link:hover { color: var(--text); background: var(--glass); }
+.btn.primary { color: #fff; background: linear-gradient(180deg, var(--accent-2) 0%, var(--accent) 100%);
+  box-shadow: 0 10px 24px rgba(255, 106, 26, .3), inset 0 1px 0 rgba(255, 255, 255, .45); }
+.btn.primary:hover { filter: brightness(1.05); }
+.btn.ghost { background: var(--glass-hi); border: 1px solid var(--glass-edge); color: var(--ink); box-shadow: 0 4px 14px rgba(120, 58, 24, .06); }
+.btn.small { height: 36px; font-size: 14px; padding: 0 14px; }
+.btn[disabled] { opacity: .5; pointer-events: none; }
+.speak { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 106, 26, .1); color: var(--accent-text); flex: none; transition: background .2s; }
+.speak:hover { background: rgba(255, 106, 26, .18); }
+.speak svg { width: 17px; height: 17px; }
 
-.speak { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--glass-2); color: var(--muted); flex: none; }
-.speak svg { width: 16px; height: 16px; }
-.speak:hover { color: var(--text); }
+/* intro tiles */
+.tiles { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 12px; }
+.tile { position: relative; text-align: left; background: var(--glass); border: 1px solid var(--glass-edge); border-radius: 24px; padding: 16px; box-shadow: var(--shadow);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); transition: transform .15s, box-shadow .25s, background .2s; }
+.tile:hover { background: var(--glass-hi); }
+.tile:active { transform: scale(.98); }
+.tile.on { box-shadow: 0 0 0 2px rgba(255, 106, 26, .5), 0 12px 30px rgba(255, 106, 26, .18); }
+.tile .k { font-family: var(--font-ja); font-weight: 700; font-size: 32px; line-height: 1.2; }
+.tile .w { font-family: var(--font-ja); font-size: 15px; color: var(--ink-2); min-height: 20px; }
+.tile .m { font-size: 17px; font-weight: 700; margin-top: 8px; }
+.tile .r { font-size: 14px; color: var(--ink-2); }
+.tile .t { font-size: 13px; color: var(--ink-2); margin-top: 8px; line-height: 1.45; }
+.tile .speak { position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; }
 
-.intro-grid { width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 12px; }
-.word { position: relative; background: var(--glass); border: 1px solid var(--line); border-radius: 20px; padding: 16px 16px 14px; text-align: left; transition: background .2s, transform .1s; }
-.word:hover { background: var(--glass-2); }
-.word:active { transform: scale(.98); }
-.word .k { font-size: 32px; font-weight: 500; line-height: 1.2; }
-.word .w { font-size: 15px; color: var(--muted); min-height: 18px; }
-.word .m { font-size: 16px; font-weight: 600; margin-top: 8px; }
-.word .r { font-size: 14px; color: var(--muted); }
-.word .t { font-size: 13px; color: rgba(245, 245, 247, .7); margin-top: 8px; line-height: 1.4; }
-.word .speak { position: absolute; top: 12px; right: 12px; }
+/* welcome */
+.hero-copy { text-align: center; margin-top: 10px; }
+.hero-copy h1 { font-size: clamp(30px, 8.5vw, 40px); line-height: 1.1; font-weight: 700; letter-spacing: -.025em; margin: 0 0 10px; text-wrap: balance; }
+.hero-copy h1 em { font-style: normal; color: var(--accent); }
+.hero-copy p { margin: 0 auto; max-width: 32ch; color: var(--ink-2); font-size: 16px; line-height: 1.5; }
 
 .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.stat { background: var(--glass); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
-.stat b { display: block; font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.stat span { font-size: 12px; color: var(--muted); }
+.stat { background: var(--glass-hi); border: 1px solid var(--glass-edge); border-radius: 18px; padding: 12px; }
+.stat b { display: block; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 12px; color: var(--ink-2); }
 
-/* composer */
-.composer { position: relative; z-index: 2; padding-top: 8px; }
-.quick { display: flex; justify-content: center; gap: 4px; margin-bottom: 8px; }
-.bar { display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .07); border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 18px; transition: border-color .2s, background .2s; }
-.bar:focus-within { border-color: rgba(139, 140, 255, .45); background: rgba(255, 255, 255, .09); }
-.bar input { flex: 1; min-width: 0; background: none; border: 0; outline: none; font-size: 17px; height: 44px; }
-.bar input::placeholder { color: var(--faint); }
-.round { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; flex: none; transition: transform .1s, background .2s, opacity .2s; }
-.round:active { transform: scale(.92); }
-.round svg { width: 20px; height: 20px; }
-.round.mic { background: var(--glass-2); }
-.round.mic.on { background: linear-gradient(135deg, #22d3ee, #6366f1 55%, #ec4899); box-shadow: 0 0 22px rgba(139, 140, 255, .55); }
-.round.send { background: #f5f5f7; color: #0b0c10; }
-.round.send[disabled] { opacity: .25; }
+/* dock */
+.dock { position: relative; padding-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+.bar { display: flex; align-items: center; gap: 8px; background: var(--glass-hi); border: 1px solid var(--glass-edge); border-radius: 999px; padding: 6px 6px 6px 20px;
+  box-shadow: var(--shadow); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.bar:focus-within { box-shadow: 0 0 0 3px rgba(255, 106, 26, .2), var(--shadow); }
+.bar input { flex: 1; min-width: 0; border: 0; outline: none; background: none; font-size: 17px; font-weight: 500; height: 44px; }
+.bar input::placeholder { color: var(--ink-3); }
+.send { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent)); transition: opacity .2s, transform .12s; }
+.send:active { transform: scale(.92); }
+.send[disabled] { opacity: .35; }
+.send svg { width: 20px; height: 20px; }
+.controls { display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+.controls.solo { justify-content: center; }
+.mic-wrap { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; position: relative;
+  background: rgba(255, 255, 255, .45); border: 1px solid var(--glass-edge); box-shadow: var(--shadow); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.mic-wrap::before { content: ""; position: absolute; inset: -1px; border-radius: 50%; border: 2px solid rgba(255, 106, 26, .35); opacity: 0; }
+.mic-wrap.on::before { animation: ring 1.4s ease-out infinite; }
+@keyframes ring { from { transform: scale(.85); opacity: .9; } to { transform: scale(1.35); opacity: 0; } }
+.mic { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; color: #fff;
+  background: radial-gradient(circle at 34% 28%, #ffd3b0 0%, #ff8c40 45%, #f0550c 100%);
+  box-shadow: 0 12px 30px rgba(255, 106, 26, .38), inset 0 2px 6px rgba(255, 255, 255, .45); transition: transform .12s; }
+.mic:active { transform: scale(.94); }
+.mic svg { width: 28px; height: 28px; }
 
 /* sheet */
-.scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .5); z-index: 10; opacity: 0; transition: opacity .25s; }
+.scrim { position: fixed; inset: 0; z-index: 10; background: rgba(70, 30, 10, .16); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); opacity: 0; transition: opacity .25s; }
 .scrim.open { opacity: 1; }
-.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; margin: 0 auto; max-width: 640px; max-height: 86dvh; display: flex; flex-direction: column;
-  background: rgba(22, 23, 30, .92); backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
-  border: 1px solid var(--line); border-bottom: 0; border-radius: 26px 26px 0 0; padding: 10px 16px calc(var(--safe-b) + 16px);
-  transform: translateY(105%); transition: transform .32s cubic-bezier(.2, .8, .2, 1); }
+.sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 11; max-width: 620px; margin: 0 auto; max-height: 88dvh; display: flex; flex-direction: column;
+  background: rgba(251, 247, 244, .92); border: 1px solid var(--glass-edge); border-bottom: 0; border-radius: 30px 30px 0 0; padding: 10px 18px calc(var(--safe-b) + 18px);
+  box-shadow: 0 -10px 40px rgba(120, 58, 24, .14); backdrop-filter: blur(30px) saturate(150%); -webkit-backdrop-filter: blur(30px) saturate(150%);
+  transform: translateY(105%); transition: transform .34s cubic-bezier(.2, .8, .2, 1); }
 .sheet.open { transform: none; }
-.grab { width: 38px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .18); margin: 0 auto 12px; }
-.sheet h2 { font-size: 20px; margin: 0 0 12px; font-weight: 650; letter-spacing: -.01em; display: flex; align-items: center; }
-.sheet h2 .x { margin-left: auto; }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: rgba(35, 21, 14, .15); margin: 0 auto 12px; }
+.sheet h2 { font-size: 22px; font-weight: 700; letter-spacing: -.02em; margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+.sheet h2 .x { margin-left: auto; width: 38px; height: 38px; }
 .sheet .scroll { overflow-y: auto; min-height: 0; }
-.toggle { display: flex; align-items: center; justify-content: space-between; padding: 14px 2px; border-bottom: 1px solid var(--line); font-size: 16px; }
-.toggle small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
-.switch { width: 50px; height: 30px; border-radius: 999px; background: rgba(255, 255, 255, .14); position: relative; transition: background .2s; flex: none; }
-.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .2s; }
-.switch[aria-checked="true"] { background: #34c759; }
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 2px; border-bottom: 1px solid rgba(255, 106, 26, .1); font-size: 16px; font-weight: 600; }
+.toggle small { display: block; color: var(--ink-2); font-size: 13px; font-weight: 500; margin-top: 2px; }
+.switch { width: 50px; height: 30px; border-radius: 999px; background: rgba(35, 21, 14, .14); position: relative; transition: background .2s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .15); transition: transform .2s; }
+.switch[aria-checked="true"] { background: var(--accent); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
-.menu-actions { display: grid; gap: 8px; margin-top: 16px; }
+.menu-actions { display: grid; gap: 10px; margin-top: 18px; }
+.note { color: var(--ink-2); font-size: 15px; line-height: 1.55; }
+.meta-line { text-align: center; font-size: 13px; color: var(--ink-3); margin-top: 14px; }
+code { background: rgba(255, 106, 26, .1); padding: 1px 6px; border-radius: 6px; font-size: .9em; }
 
-.chat { display: flex; flex-direction: column; gap: 8px; padding: 4px 0 12px; min-height: 120px; }
-.msg { max-width: 84%; padding: 10px 14px; border-radius: 20px; font-size: 16px; line-height: 1.45; white-space: pre-wrap; }
-.msg.user { align-self: flex-end; background: #f5f5f7; color: #0b0c10; border-bottom-right-radius: 6px; }
-.msg.bot { align-self: flex-start; background: var(--glass-2); border-bottom-left-radius: 6px; }
-.msg.bot.thinking { color: var(--muted); }
-.msg .added { display: block; margin-top: 8px; font-size: 13px; color: var(--ok); }
-.empty-note { color: var(--muted); font-size: 15px; line-height: 1.5; }
-code { background: var(--glass-2); padding: 1px 6px; border-radius: 6px; font-size: .9em; }
+.chat { display: flex; flex-direction: column; gap: 8px; padding: 2px 0 12px; }
+.msg { max-width: 84%; padding: 11px 15px; border-radius: 22px; font-size: 16px; line-height: 1.45; white-space: pre-wrap; }
+.msg.user { align-self: flex-end; color: #fff; background: linear-gradient(180deg, var(--accent-2), var(--accent)); border-bottom-right-radius: 8px; }
+.msg.bot { align-self: flex-start; background: var(--glass-hi); border: 1px solid var(--glass-edge); border-bottom-left-radius: 8px; }
+.msg.bot.thinking { color: var(--ink-3); }
+.msg .added { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--ok); font-weight: 600; }
 
-.toast { position: fixed; left: 50%; top: calc(var(--safe-t) + 64px); transform: translate(-50%, -12px); z-index: 20; background: rgba(30, 31, 40, .92); border: 1px solid var(--line); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  padding: 10px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; max-width: calc(100% - 32px); text-align: center; }
+.toast { position: fixed; left: 50%; top: calc(var(--safe-t) + 70px); z-index: 20; transform: translate(-50%, -10px); opacity: 0; pointer-events: none;
+  background: rgba(255, 255, 255, .92); border: 1px solid var(--glass-edge); box-shadow: var(--shadow); padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 600;
+  transition: opacity .25s, transform .25s; width: max-content; max-width: calc(100% - 32px); text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-@media (min-width: 900px) and (min-height: 640px) {
-  .prompt { font-size: 80px; }
-  #app { padding-top: 16px; }
-}
-@media (max-height: 620px) {
-  .orb-btn { --orb: min(40vw, 24vh, 160px); }
-  .prompt { font-size: 44px; }
+@media (max-height: 640px) {
+  .orb-btn { --orb: min(46vw, 26vh, 190px); }
+  .mic-wrap { width: 88px; height: 88px; } .mic { width: 64px; height: 64px; }
+  .prompt { font-size: 46px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .enter { animation: none; }
+  .wash i, .enter, .mic-wrap.on::before { animation: none; }
 }
 </style>
 </head>
 <body>
+<div class="wash" aria-hidden="true"><i class="a"></i><i class="b"></i><i class="c"></i></div>
 <div id="app">
   <header class="top">
-    <div class="brand"><i></i><span class="ja">日本語</span></div>
-    <div class="chips"><span id="leftChip" class="chip"></span><span id="streakChip" class="chip"></span></div>
-    <button id="muteBtn" class="icon-btn" aria-label="Mute voice" aria-pressed="false" title="Mute (M)">
-      <svg id="icoOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
-      <svg id="icoOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
+    <button id="menuBtn" class="glass-btn" aria-label="Menu and progress" title="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="2"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="2"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="2"/></svg>
     </button>
-    <button id="menuBtn" class="icon-btn" aria-label="Menu" title="Menu">
-      <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+    <div class="title"><div class="t1">Japanese Tutor</div><div id="meta" class="t2"></div></div>
+    <button id="muteBtn" class="glass-btn" aria-label="Mute voice" aria-pressed="false" title="Mute (M)">
+      <svg id="icoOn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+      <svg id="icoOff" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>
     </button>
     <div class="progress"><i id="bar"></i></div>
   </header>
 
   <main>
-    <section class="stage">
-      <button id="orbBtn" class="orb-btn" aria-label="Tap to start"><canvas id="orb"></canvas></button>
-      <div id="status" class="status" aria-live="polite">Tap to start</div>
-    </section>
+    <button id="orbBtn" class="orb-btn" aria-label="Start"><canvas id="orb"></canvas></button>
+    <div id="status" class="status" aria-live="polite"></div>
     <section id="view" class="view"></section>
   </main>
 
-  <footer id="composer" class="composer" hidden>
-    <div class="quick">
-      <button id="hintBtn" class="link" type="button">Hint</button>
-      <button id="dunnoBtn" class="link" type="button">Don't know</button>
-    </div>
+  <footer id="dock" class="dock" hidden>
     <form id="form" class="bar" autocomplete="off">
       <input id="input" type="text" placeholder="Type your answer" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="send" aria-label="Your answer">
-      <button id="micBtn" class="round mic" type="button" aria-label="Answer by voice" hidden>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
-      </button>
-      <button id="sendBtn" class="round send" type="submit" aria-label="Send" disabled>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+      <button id="sendBtn" class="send" type="submit" aria-label="Send" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
       </button>
     </form>
+    <div class="controls">
+      <button id="kbBtn" class="glass-btn lg" type="button" aria-label="Type instead" title="Type">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg>
+      </button>
+      <div id="micWrap" class="mic-wrap">
+        <button id="micBtn" class="mic" type="button" aria-label="Answer by voice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+        </button>
+      </div>
+      <button id="hintBtn" class="glass-btn lg" type="button" aria-label="Hint" title="Hint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>
+      </button>
+    </div>
   </footer>
 </div>
 
@@ -269,79 +302,139 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem("jpt." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem("jpt." + k, JSON.stringify(v)); } catch {} },
 };
-const ICON_SPEAK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
+const ICON_SPEAK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg>';
 
-/* ------------------------------------------------------------------ orb */
-const PAL = {
-  base: ["#22d3ee", "#6366f1", "#ec4899", "#3b82f6"],
-  correct: ["#34d399", "#22d3ee", "#a3e635", "#10b981"],
-  wrong: ["#fb7185", "#f97316", "#ec4899", "#f43f5e"],
-  listen: ["#22d3ee", "#818cf8", "#f0abfc", "#38bdf8"],
-};
-const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+/* ------------------------------------------------------------------ orb
+   A marbled liquid-glass sphere drawn with a fragment shader (domain-warped noise).
+   `level` = how lively it is (speaking/listening), `tint` flashes green/red on answers. */
+const ORB_FS = `
+precision highp float;
+uniform vec2 res; uniform float t; uniform float lvl; uniform vec3 tint; uniform float tintAmt;
+vec3 pal(float k){
+  vec3 a = vec3(1.00, 0.33, 0.06);
+  vec3 b = vec3(1.00, 0.55, 0.16);
+  vec3 c = vec3(1.00, 0.78, 0.46);
+  return k < 0.5 ? mix(a, b, k*2.0) : mix(b, c, k*2.0 - 1.0);
+}
+void main(){
+  vec2 uv = (gl_FragCoord.xy - 0.5*res) / min(res.x, res.y);
+  float S = 0.29 * (1.0 + lvl*0.10);
+  vec2 p = uv / S;
+  float r = length(p);
+  vec3 acc = vec3(0.0); float keep = 1.0;
+  for (int i = 0; i < 6; i++){
+    float fi = float(i);
+    float dirn = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
+    float ang = t*(0.2 + 0.08*fi)*dirn + fi*1.047;
+    float off = 0.2 + 0.07*sin(t*0.8 + fi*1.3) + lvl*0.22;
+    float rad = 0.78 - 0.05*fi + 0.05*sin(t*0.9 + fi*2.1);
+    vec2 dir = vec2(cos(ang), sin(ang));
+    float d = length(p - dir*off) - rad;
+    float na = ang + 2.3 + 0.5*sin(t*0.6 + fi);
+    vec2 nd = vec2(cos(na), sin(na));
+    float dn = length(p - nd*(rad*0.9 + off)) - (0.42 + 0.05*fi);
+    d = max(d, -dn);
+    float inside = smoothstep(0.025, -0.025, d);
+    float rim = smoothstep(-0.3, 0.0, d);
+    float a = inside * (0.07 + 0.5*rim*rim*rim);
+    vec3 c = mix(pal(0.72 + 0.1*sin(fi)), pal(0.08 + 0.05*fi), rim);
+    acc += c * a * keep;
+    keep *= 1.0 - a;
+  }
+  vec3 col = acc; float A = 1.0 - keep;
+  float innerA = clamp(exp(-r*r*3.4) * (0.34 + lvl*0.3), 0.0, 1.0);
+  col = col*(1.0 - innerA) + vec3(1.0, 0.66, 0.3)*innerA; A = A + innerA*(1.0 - A);
+  float coreA = clamp(exp(-r*r*9.0) * (1.0 + lvl*0.3), 0.0, 1.0);
+  col = col*(1.0 - coreA) + vec3(1.0, 0.97, 0.88)*coreA; A = A + coreA*(1.0 - A);
+  float haloA = exp(-r*r*1.05) * (0.14 + lvl*0.28) * (1.0 - A);
+  col += vec3(1.0, 0.52, 0.16)*haloA; A += haloA;
+  col = mix(col, tint * A, tintAmt*0.45);
+  gl_FragColor = vec4(col, A);
+}`;
 
 class Orb {
   constructor(canvas) {
-    this.c = canvas; this.x = canvas.getContext("2d");
-    this.state = "idle"; this.level = 0; this.kickV = 0; this.t = 0; this.last = performance.now();
-    this.pal = PAL.base.map(rgb); this.goal = PAL.base; this.flashUntil = 0;
+    this.c = canvas; this.state = "idle"; this.level = 0; this.kickV = 0; this.t = 0; this.last = performance.now();
+    this.tint = [1, 0.55, 0.16]; this.tintGoal = [1, 0.55, 0.16]; this.tintAmt = 0; this.flashUntil = 0;
     this.slow = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this.gl = this.initGL() ? this.gl : null;
+    if (!this.gl) this.x = canvas.getContext("2d");
     new ResizeObserver(() => this.resize()).observe(canvas); this.resize();
     requestAnimationFrame(t => this.frame(t));
   }
+  initGL() {
+    try {
+      const gl = this.c.getContext("webgl", { premultipliedAlpha: true, alpha: true, antialias: true });
+      if (!gl) return false;
+      const sh = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s); if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(s); return s; };
+      const pr = gl.createProgram();
+      gl.attachShader(pr, sh(gl.VERTEX_SHADER, "attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }"));
+      gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, ORB_FS));
+      gl.linkProgram(pr); if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) throw gl.getProgramInfoLog(pr);
+      gl.useProgram(pr);
+      const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(pr, "p"); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+      this.u = Object.fromEntries(["res", "t", "lvl", "tint", "tintAmt"].map(n => [n, gl.getUniformLocation(pr, n)]));
+      this.gl = gl; return true;
+    } catch (e) { console.warn("orb: WebGL unavailable, using fallback", e); return false; }
+  }
   resize() {
-    const d = Math.min(devicePixelRatio || 1, 2), r = this.c.getBoundingClientRect();
-    this.c.width = Math.max(1, r.width * d); this.c.height = Math.max(1, r.height * d);
+    const d = Math.min(devicePixelRatio || 1, 1.75), r = this.c.getBoundingClientRect();
+    this.c.width = Math.max(1, Math.round(r.width * d)); this.c.height = Math.max(1, Math.round(r.height * d));
   }
   set(state) { this.state = state; }
   kick(v = .3) { this.kickV = Math.min(1, this.kickV + v); }
-  flash(kind) { this.goal = PAL[kind] || PAL.base; this.flashUntil = performance.now() + 1300; }
+  flash(kind) {
+    this.tintGoal = kind === "wrong" ? [0.92, 0.16, 0.26] : [0.18, 0.78, 0.45];
+    this.flashUntil = performance.now() + 1400;
+  }
   frame(now) {
     const dt = Math.min(.05, (now - this.last) / 1000); this.last = now;
     if (!document.hidden) {
-      const speed = { idle: .55, listening: 1.3, speaking: 1.15, thinking: 2.6 }[this.state] ?? .55;
-      this.t += dt * speed * (this.slow ? .35 : 1);
-      const base = { idle: .05, listening: .2, speaking: .24, thinking: .14 }[this.state] ?? .05;
-      let target = base + Math.sin(now / 1150) * .03 + this.kickV * .55;
-      if (this.state === "speaking") target += (Math.sin(now / 95) * .5 + .5) * .1;
-      if (this.state === "listening") target += (Math.sin(now / 170) * .5 + .5) * .06;
-      this.level += (target - this.level) * .14; this.kickV *= .9;
-      if (now > this.flashUntil) this.goal = this.state === "listening" ? PAL.listen : PAL.base;
-      const g = this.goal.map(rgb);
-      this.pal = this.pal.map((c, i) => c.map((v, j) => v + (g[i][j] - v) * .07));
-      this.draw();
+      const speed = { idle: .16, listening: .42, speaking: .36, thinking: .8 }[this.state] ?? .16;
+      this.t += dt * speed * (this.slow ? .4 : 1) * (1 + this.level);
+      const base = { idle: .04, listening: .22, speaking: .26, thinking: .16 }[this.state] ?? .04;
+      let target = base + Math.sin(now / 1300) * .03 + this.kickV * .6;
+      if (this.state === "speaking") target += (Math.sin(now / 110) * .5 + .5) * .12;
+      if (this.state === "listening") target += (Math.sin(now / 190) * .5 + .5) * .08;
+      this.level += (target - this.level) * .12; this.kickV *= .9;
+      const flashing = now < this.flashUntil;
+      this.tintAmt += ((flashing ? 1 : 0) - this.tintAmt) * (flashing ? .12 : .05);
+      if (!flashing && this.tintAmt < .02) this.tintGoal = [1, 0.55, 0.16];
+      this.tint = this.tint.map((v, i) => v + (this.tintGoal[i] - v) * .15);
+      this.gl ? this.drawGL() : this.draw2D();
     }
     requestAnimationFrame(t => this.frame(t));
   }
-  draw() {
-    const { x, c, pal, level, t } = this, w = c.width, h = c.height, cx = w / 2, cy = h / 2;
-    const R = Math.min(w, h) * .345 * (1 + level * .16);
-    const col = (i, a) => `rgba(${pal[i].map(Math.round).join(",")},${a})`;
+  drawGL() {
+    const { gl, u, c } = this;
+    gl.viewport(0, 0, c.width, c.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.uniform2f(u.res, c.width, c.height); gl.uniform1f(u.t, this.t); gl.uniform1f(u.lvl, this.level);
+    gl.uniform3fv(u.tint, this.tint); gl.uniform1f(u.tintAmt, this.tintAmt);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  draw2D() {
+    const { x, c, level, t } = this, w = c.width, h = c.height, cx = w / 2, cy = h / 2;
+    const R = Math.min(w, h) * .335 * (1 + level * .07);
     x.clearRect(0, 0, w, h);
-    const glow = x.createRadialGradient(cx, cy, R * .55, cx, cy, R * 1.45);
-    glow.addColorStop(0, col(1, .32 + level * .45)); glow.addColorStop(.55, col(2, .08 + level * .12)); glow.addColorStop(1, "rgba(0,0,0,0)");
-    x.fillStyle = glow; x.fillRect(0, 0, w, h);
+    const g = x.createRadialGradient(cx, cy, R * .9, cx, cy, R * 1.35);
+    g.addColorStop(0, `rgba(255,140,64,${.3 + level * .4})`); g.addColorStop(1, "rgba(255,140,64,0)");
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
     x.save(); x.beginPath(); x.arc(cx, cy, R, 0, Math.PI * 2); x.clip();
-    x.fillStyle = "#06070b"; x.fillRect(cx - R, cy - R, R * 2, R * 2);
-    x.globalCompositeOperation = "lighter";
+    x.fillStyle = "#ff7a2a"; x.fillRect(cx - R, cy - R, R * 2, R * 2);
+    const cols = ["#ffb070", "#fff3e3", "#ff5a14", "#ffd2a8"];
     for (let i = 0; i < 4; i++) {
-      const a = t * (.7 + i * .27) + i * 1.9, spread = R * (.3 + level * .3);
-      const bx = cx + Math.cos(a) * spread, by = cy + Math.sin(a * 1.17 + i) * spread;
-      const rr = R * (.62 + .14 * Math.sin(t * 1.4 + i * 2.1));
-      const g = x.createRadialGradient(bx, by, 0, bx, by, rr);
-      g.addColorStop(0, col(i, .95)); g.addColorStop(.45, col(i, .45)); g.addColorStop(1, col(i, 0));
-      x.fillStyle = g; x.fillRect(cx - R, cy - R, R * 2, R * 2);
+      const a = t * 4 * (.7 + i * .27) + i * 1.9, s = R * (.35 + level * .25);
+      const bx = cx + Math.cos(a) * s, by = cy + Math.sin(a * 1.17 + i) * s, rr = R * (.55 + .12 * Math.sin(t * 5 + i));
+      const bg = x.createRadialGradient(bx, by, 0, bx, by, rr);
+      bg.addColorStop(0, cols[i]); bg.addColorStop(1, "rgba(255,106,26,0)");
+      x.fillStyle = bg; x.fillRect(cx - R, cy - R, R * 2, R * 2);
     }
-    x.globalCompositeOperation = "source-over";
-    const hl = x.createRadialGradient(cx - R * .38, cy - R * .48, 0, cx - R * .38, cy - R * .48, R * .9);
-    hl.addColorStop(0, "rgba(255,255,255,.28)"); hl.addColorStop(1, "rgba(255,255,255,0)");
+    const hl = x.createRadialGradient(cx - R * .38, cy - R * .45, 0, cx - R * .38, cy - R * .45, R * .8);
+    hl.addColorStop(0, "rgba(255,255,255,.4)"); hl.addColorStop(1, "rgba(255,255,255,0)");
     x.fillStyle = hl; x.fillRect(cx - R, cy - R, R * 2, R * 2);
-    const edge = x.createRadialGradient(cx, cy, R * .78, cx, cy, R);
-    edge.addColorStop(0, "rgba(0,0,0,0)"); edge.addColorStop(1, "rgba(0,0,0,.45)");
-    x.fillStyle = edge; x.fillRect(cx - R, cy - R, R * 2, R * 2);
     x.restore();
-    x.beginPath(); x.arc(cx, cy, R - .5, 0, Math.PI * 2);
-    x.strokeStyle = "rgba(255,255,255,.10)"; x.lineWidth = Math.max(1, R * .012); x.stroke();
   }
 }
 const orb = new Orb($("#orb"));
@@ -377,19 +470,21 @@ const TTS = {
   },
   unlock() { if (this.ok) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } },
   stop() { this.gen++; if (this.ok) speechSynthesis.cancel(); if (this.done) { const d = this.done; this.done = null; d(); } },
-  speak(segs) {
+  /* segs: [{t, lang}]. hooks.seg(i) fires as segment i starts, hooks.word(i, charIndex) on word boundaries. */
+  speak(segs, hooks = {}) {
     this.stop();
     if (!segs || !segs.length) return Promise.resolve();
-    if (this.muted || !this.ok) { orb.kick(.35); return Promise.resolve(); }
+    if (this.muted || !this.ok) { segs.forEach((_, i) => hooks.seg?.(i, true)); orb.kick(.35); return Promise.resolve(); }
     const gen = this.gen;
     return new Promise(resolve => {
       this.done = resolve;
       let i = 0;
-      const finish = () => { if (this.done === resolve) this.done = null; if (gen === this.gen) setOrbIdle(); resolve(); };
+      const finish = () => { if (this.done === resolve) this.done = null; if (gen === this.gen) setOrbIdle(); hooks.end?.(); resolve(); };
       const next = () => {
         if (gen !== this.gen) return resolve();
+        if (i > 0) hooks.segEnd?.(i - 1);
         if (i >= segs.length) return finish();
-        const s = segs[i++];
+        const idx = i, s = segs[i++];
         const u = new SpeechSynthesisUtterance(s.t);
         u.lang = s.lang === "ja" ? "ja-JP" : "en-US";
         const v = this.pick(s.lang); if (v) u.voice = v;
@@ -397,8 +492,8 @@ const TTS = {
         let moved = false;
         const go = () => { if (!moved) { moved = true; clearTimeout(guard); next(); } };
         const guard = setTimeout(go, Math.max(2200, s.t.length * (s.lang === "ja" ? 260 : 95) + 1200));
-        u.onstart = () => orb.kick(.4);
-        u.onboundary = () => orb.kick(.28);
+        u.onstart = () => { orb.kick(.4); hooks.seg?.(idx); };
+        u.onboundary = e => { orb.kick(.28); hooks.word?.(idx, e.charIndex + (e.charLength || 1)); };
         u.onend = go; u.onerror = go;
         orb.set("speaking");
         speechSynthesis.speak(u);
@@ -408,6 +503,22 @@ const TTS = {
   },
 };
 TTS.init();
+
+/* The spoken line: render segments as words that light up as they're spoken. */
+function speakLine(el, segs, hooks = {}) {
+  if (!el) return TTS.speak(segs, hooks);
+  el.classList.remove("heard");
+  el.innerHTML = "“" + segs.map((s, i) => `<span class="seg ${s.lang === "ja" ? "ja" : ""}" data-i="${i}">${
+    s.t.split(/(\s+)/).map(w => w.trim() ? `<span class="w">${esc(w)}</span>` : w).join("")}</span>`).join(" ") + "”";
+  const words = i => [...el.querySelectorAll(`.seg[data-i="${i}"] .w`)];
+  const light = (i, upto) => { let n = 0; for (const w of words(i)) { n += w.textContent.length + 1; if (upto === undefined || n <= upto + 1) w.classList.add("on"); } };
+  return TTS.speak(segs, {
+    seg: (i, instant) => { hooks.seg?.(i); if (instant) light(i); else { const ws = words(i); if (ws[0]) ws[0].classList.add("on"); } },
+    word: (i, c) => light(i, c),
+    segEnd: i => { light(i); hooks.segEnd?.(i); },
+    end: () => { el.querySelectorAll(".w").forEach(w => w.classList.add("on")); hooks.end?.(); },
+  });
+}
 
 /* ------------------------------------------------------------- voice in */
 const STT = {
@@ -440,7 +551,7 @@ const STT = {
 
 /* ------------------------------------------------------------------ api */
 async function api(path, body) {
-  if (window.JPT_DEMO) return window.JPT_DEMO(path, body);  // offline demo build only
+  if (window.JPT_DEMO) return window.JPT_DEMO(path, body);  // preview build only
   const opt = body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) };
   const r = await fetch(API + path, opt);
   const j = await r.json().catch(() => ({}));
@@ -451,9 +562,8 @@ async function api(path, body) {
 /* ---------------------------------------------------------------- state */
 const S = {
   started: false, phase: "welcome", item: null, card: null, busy: false, hinted: false,
-  done: 0, left: 0, stats: null, fbToken: 0,
-  handsFree: store.get("handsFree", false),
-  romaji: store.get("romaji", false),
+  done: 0, left: 0, stats: null, token: 0, typing: store.get("typing", false),
+  handsFree: store.get("handsFree", false), romaji: store.get("romaji", false),
   ask: { enabled: false, history: [] },
 };
 const view = $("#view"), status = $("#status");
@@ -463,134 +573,154 @@ function toast(msg, ms = 2200) {
   clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove("show"), ms);
 }
 function say(msg) { $("#live").textContent = msg; }
-function setStatus(msg) { status.textContent = msg; }
+function setStatus(msg, quiet = false) { status.textContent = msg; status.classList.toggle("quiet", quiet); }
 function setOrbIdle() { if (!STT.on) orb.set("idle"); }
 function setView(html) { view.innerHTML = html; view.scrollTop = 0; view.firstElementChild?.classList.add("enter"); }
-function compact(on) { document.body.classList.toggle("compact", on); }
+function layout(mode) { document.body.classList.toggle("compact", mode === "compact"); document.body.classList.toggle("hero", mode === "hero"); }
 function jp(v) { return v.kana || v.word; }
 function first(meaning) { return meaning.split("/")[0].trim(); }
 
-function updateChips() {
-  $("#leftChip").textContent = S.phase === "quiz" || S.phase === "feedback" ? `${S.left + 1} left` : "";
-  const st = S.stats?.streak; $("#streakChip").textContent = st ? `🔥 ${st}` : "";
+function updateMeta() {
+  const parts = [];
+  if (S.phase === "quiz" || S.phase === "feedback") parts.push(`${S.left + 1} left`);
+  if (S.stats?.streak) parts.push(`🔥 ${S.stats.streak} day${S.stats.streak > 1 ? "s" : ""}`);
+  $("#meta").textContent = parts.join(" · ");
   const total = S.done + S.left + (S.card ? 1 : 0);
   $("#bar").style.width = total ? `${Math.round(100 * S.done / total)}%` : "0";
 }
-function showComposer(on) {
-  $("#composer").hidden = !on;
-  if (on) {
-    $("#micBtn").hidden = !STT.ok;
-    const i = $("#input"); i.value = ""; $("#sendBtn").disabled = true;
-    i.placeholder = S.card?.direction === "production" ? "Type it (kana or romaji)" : "Type the meaning";
-    if (matchMedia("(pointer: fine)").matches) setTimeout(() => i.focus({ preventScroll: true }), 50);
-  }
+function showDock(on) {
+  $("#dock").hidden = !on;
+  if (!on) return;
+  const voice = STT.ok;
+  $("#micWrap").hidden = !voice;
+  $("#kbBtn").hidden = !voice;
+  $(".controls").classList.toggle("solo", !voice);
+  $("#form").hidden = voice && !S.typing;
+  const i = $("#input"); i.value = ""; $("#sendBtn").disabled = true;
+  i.placeholder = S.card?.direction === "production" ? "Type it in kana or romaji" : "Type the meaning";
+  if (!$("#form").hidden && matchMedia("(pointer: fine)").matches) setTimeout(() => i.focus({ preventScroll: true }), 60);
 }
 
 /* --------------------------------------------------------------- render */
 function renderWelcome() {
-  S.phase = "welcome"; compact(false);
-  setView(`<div class="welcome"><h1>Casual Japanese.</h1><p>Three words at a time. Answer out loud or type.<br>Tap the orb to start.</p></div>`);
+  S.phase = "welcome"; layout("hero"); showDock(false);
+  setStatus("");
+  setView(`<div class="hero-copy"><h1>Talk <em>Japanese,</em><br>Casually.</h1>
+    <p>Three words at a time. Answer out loud, and the tutor talks back.</p>
+    <div class="row" style="max-width:340px;margin:22px auto 0"><button id="goBtn" class="btn primary">Get started</button></div></div>`);
+  $("#goBtn").onclick = start;
 }
 
-function wordCard(v, i) {
-  return `<button class="word" data-i="${i}" aria-label="Hear ${esc(jp(v))}">
+function tileHTML(v, i) {
+  return `<button class="tile" data-i="${i}" aria-label="Hear ${esc(jp(v))}">
     <span class="speak" aria-hidden="true">${ICON_SPEAK}</span>
-    <div class="k ja">${esc(jp(v))}</div><div class="w ja">${v.kana ? esc(v.word) : ""}</div>
+    <div class="k">${esc(jp(v))}</div><div class="w">${v.kana ? esc(v.word) : ""}</div>
     <div class="m">${esc(v.meaning)}</div><div class="r">${esc(v.romaji)}</div>
     ${v.note ? `<div class="t">${esc(v.note)}</div>` : ""}</button>`;
 }
 
 async function renderIntro(item) {
-  S.phase = "intro"; S.card = null; showComposer(false); compact(true); updateChips();
-  setView(`<div style="width:100%"><div class="kicker" style="text-align:center">New words</div>
-    <div class="intro-grid">${item.cards.map(wordCard).join("")}</div>
+  S.phase = "intro"; S.card = null; showDock(false); layout("compact"); updateMeta();
+  setStatus("New words");
+  setView(`<div style="width:100%">
+    <div class="tiles">${item.cards.map(tileHTML).join("")}</div>
     <div class="row"><button id="goQuiz" class="btn primary">Quiz me</button></div></div>`);
-  view.querySelectorAll(".word").forEach(b => b.onclick = () => {
-    const v = item.cards[+b.dataset.i]; TTS.speak([{ t: jp(v), lang: "ja" }, { t: first(v.meaning), lang: "en" }]);
+  const tiles = [...view.querySelectorAll(".tile")];
+  tiles.forEach(b => b.onclick = () => {
+    const v = item.cards[+b.dataset.i];
+    tiles.forEach(t => t.classList.toggle("on", t === b));
+    TTS.speak([{ t: jp(v), lang: "ja" }, { t: first(v.meaning), lang: "en" }], { end: () => b.classList.remove("on") });
   });
   $("#goQuiz").onclick = () => show(item.first);
-  setStatus("Learn these, then quiz");
   say(`New words: ${item.cards.map(v => `${jp(v)}, ${v.meaning}`).join("; ")}`);
-  await TTS.speak(item.speech);
+  await TTS.speak(item.speech, {
+    seg: i => { const n = i === 0 ? -1 : Math.floor((i - 1) / 2); tiles.forEach((t, k) => t.classList.toggle("on", k === n)); },
+    end: () => tiles.forEach(t => t.classList.remove("on")),
+  });
 }
 
 async function renderQuiz(item) {
   const v = item.card;
-  S.phase = "quiz"; S.card = v; S.left = item.left; S.hinted = false; compact(false); updateChips();
+  S.phase = "quiz"; S.card = v; S.left = item.left; S.hinted = false; layout(""); updateMeta();
   const rec = v.direction === "recognition";
   setView(`<div style="display:flex;flex-direction:column;align-items:center;width:100%">
     <div class="kicker">${rec ? "What does this mean?" : "Say it in Japanese"}</div>
-    ${rec ? `<div class="prompt ja">${esc(jp(v))}</div>${v.kana ? `<div class="sub ja">${esc(v.word)}</div>` : ""}`
+    ${rec ? `<div class="prompt">${esc(jp(v))}</div>${v.kana ? `<div class="sub">${esc(v.word)}</div>` : ""}`
           : `<div class="prompt en">${esc(v.meaning)}</div>`}
     <div id="hint" class="hint" ${S.romaji && rec ? "" : "hidden"}>${rec ? esc(v.romaji) : ""}</div>
-    <div id="heard" class="heard"></div></div>`);
-  showComposer(true);
-  setStatus(STT.ok ? "Tap the orb to answer" : "Type your answer");
+    <div id="line" class="line"></div>
+    <button id="dunnoBtn" class="textlink" type="button">I don't know</button></div>`);
+  $("#dunnoBtn").onclick = () => submit("", [], true);
+  showDock(true);
+  setStatus(STT.ok && !S.typing ? "Tap the mic and answer" : "", true);
   say(rec ? `What does ${jp(v)} mean?` : `How do you say ${v.meaning} in Japanese?`);
-  const token = ++S.fbToken;
+  const token = ++S.token;
   await TTS.speak(item.speech);
-  if (S.handsFree && STT.ok && S.phase === "quiz" && token === S.fbToken) listen();
+  if (S.handsFree && STT.ok && S.phase === "quiz" && token === S.token) listen();
 }
 
 function renderEmpty() {
-  S.phase = "empty"; S.card = null; S.left = 0; showComposer(false); compact(false); updateChips();
-  setView(`<div class="welcome"><h1>All caught up.</h1><p>Nothing else is due right now.</p>
-    <div class="row" style="max-width:420px;margin:18px auto 0"><button id="moreBtn" class="btn primary">+3 new words</button><button id="endBtn" class="btn ghost">Done</button></div></div>`);
-  $("#moreBtn").onclick = moreWords; $("#endBtn").onclick = endSession;
+  S.phase = "empty"; S.card = null; S.left = 0; showDock(false); layout("hero"); updateMeta();
   setStatus("");
-  TTS.speak([{ t: "That's everything for now.", lang: "en" }]);
+  setView(`<div class="hero-copy"><h1>All caught up.</h1><p>Nothing else is due right now.</p>
+    <div class="row" style="max-width:420px;margin:20px auto 0"><button id="endBtn" class="btn ghost">Done</button><button id="moreBtn" class="btn primary">+3 new words</button></div>
+    <div id="line" class="line"></div></div>`);
+  $("#moreBtn").onclick = moreWords; $("#endBtn").onclick = endSession;
+  speakLine($("#line"), [{ t: "That's everything for now.", lang: "en" }]);
 }
 
 function renderSummary(d) {
-  S.phase = "summary"; S.card = null; showComposer(false); compact(false); S.left = 0; S.done = 0; updateChips();
+  S.phase = "summary"; S.card = null; showDock(false); layout("compact"); S.left = 0; S.done = 0; updateMeta();
   const pct = d.cards ? Math.round(100 * d.right_first_try / d.cards) : 0;
-  setView(`<div style="width:100%"><div class="welcome"><h1>Nice session.</h1></div>
+  setStatus(d.sync && d.sync !== "sync off" ? "Saved to Anki · synced" : "Saved to Anki", true);
+  setView(`<div style="width:100%"><div class="hero-copy"><h1>Nice session.</h1></div>
     <div class="stats" style="margin-top:14px">
       <div class="stat"><b>${d.cards}</b><span>cards</span></div>
-      <div class="stat"><b>${pct}%</b><span>first try</span></div>
-      <div class="stat"><b>${d.minutes}</b><span>min</span></div></div>
-    ${d.missed.length ? `<div class="panel" style="margin-top:10px"><div class="kicker" style="margin:0 0 6px">Coming back first next time</div><div class="ja" style="font-size:22px">${d.missed.map(esc).join("　")}</div></div>` : ""}
+      <div class="stat"><b>${pct}%</b><span>right first try</span></div>
+      <div class="stat"><b>${d.minutes}</b><span>minutes</span></div></div>
+    ${d.missed.length ? `<div class="panel" style="margin-top:10px"><div class="kicker" style="margin-bottom:6px">Coming back first next time</div><div class="ja" style="font-size:24px;font-weight:700">${d.missed.map(esc).join("　")}</div></div>` : ""}
+    <div id="line" class="line"></div>
     <div class="row"><button id="againBtn" class="btn primary">Keep going</button></div></div>`);
   $("#againBtn").onclick = () => { S.started = false; start(); };
-  setStatus(d.sync && d.sync !== "sync off" ? "Saved to Anki · synced" : "Saved to Anki");
-  TTS.speak([{ t: d.cards ? `Nice. ${d.right_first_try} out of ${d.cards} first try.` : "See you next time.", lang: "en" }]);
+  speakLine($("#line"), [{ t: d.cards ? `Nice. ${d.right_first_try} out of ${d.cards} on the first try.` : "See you next time.", lang: "en" }]);
 }
 
 function feedbackHTML(c, heard) {
-  const v = c.card, label = { correct: "✓ Correct", close: "≈ Close", wrong: "✗ Not quite" }[c.verdict];
-  const showAll = c.verdict !== "correct";
-  return `<div class="panel fb">
-    <div class="verdict"><span class="pill ${c.verdict}">${label}</span><span class="line">${esc(c.line)}</span></div>
-    <div class="ans"><span class="big ja">${esc(jp(v))}</span>${v.kana ? `<span class="small ja">${esc(v.word)}</span>` : ""}
-      <button class="speak say" id="sayAns" aria-label="Hear it">${ICON_SPEAK}</button></div>
+  const v = c.card, label = { correct: "Correct", close: "Close enough", wrong: "Not quite" }[c.verdict];
+  const full = c.verdict !== "correct";
+  return `<div style="width:100%">
+    <div id="line" class="line" style="margin-top:0"></div>
+    <div class="panel" style="margin-top:12px">
+    <span class="pill ${c.verdict}">${label}</span>
+    <div class="ans"><span class="big">${esc(jp(v))}</span>${v.kana ? `<span class="small">${esc(v.word)}</span>` : ""}
+      <button class="speak" id="sayAns" aria-label="Hear it">${ICON_SPEAK}</button></div>
     <div class="mean"><span class="ro">${esc(v.romaji)}</span> · ${esc(v.meaning)}</div>
-    ${heard ? `<div class="src" style="margin-top:6px">You said: ${esc(heard)}</div>` : ""}
-    ${showAll && v.note ? `<div class="tip">${esc(v.note)}</div>` : ""}
-    ${showAll && v.example_html ? `<div class="ex"><div class="jp ja">${v.example_html}</div><div class="en">${esc(v.example_en)}</div></div>` : ""}
+    ${heard ? `<div class="said">You said “${esc(heard)}”</div>` : ""}
+    ${full && v.note ? `<div class="tip">${esc(v.note)}</div>` : ""}
+    ${full && v.example_html ? `<div class="ex"><div class="jp">${v.example_html}</div><div class="en">${esc(v.example_en)}</div></div>` : ""}
     ${v.source ? `<div class="src">from ${esc(v.source)}</div>` : ""}
-    <div class="row">${showAll ? `<button id="rightBtn" class="btn ghost">I was right</button>` : ""}<button id="nextBtn" class="btn primary">Next</button></div>
-  </div>`;
+    <div class="row">${full ? `<button id="rightBtn" class="btn ghost">I was right</button>` : ""}<button id="nextBtn" class="btn primary">Next</button></div>
+  </div></div>`;
 }
 
 /* ----------------------------------------------------------------- flow */
 async function start() {
   if (S.started) return;
   S.started = true; TTS.unlock();
-  orb.set("thinking"); setStatus("Getting your words…");
+  orb.set("thinking"); setStatus("Getting your words…", true);
   try {
     const [cfg, d] = await Promise.all([api("/config").catch(() => ({})), api("/start", {})]);
     S.ask.enabled = !!cfg.ask; S.stats = d.stats; S.done = 0;
-    orb.set("idle");
-    $("#orbBtn").setAttribute("aria-label", "Tap to talk");
-    if (d.unlocked) toast(`Unlocked 3 new starter words`);
+    orb.set("idle"); $("#orbBtn").setAttribute("aria-label", "Talk");
+    if (d.unlocked) toast("Unlocked 3 new starter words");
     show(d.item);
   } catch (e) {
-    S.started = false; orb.set("idle"); setStatus("Tap to retry"); toast(e.message || "Couldn't reach the server", 3500);
+    S.started = false; orb.set("idle"); setStatus("Tap to try again"); toast(e.message || "Couldn't reach the server", 3500);
   }
 }
 
 function show(item) {
-  S.item = item; S.fbToken++;
+  S.item = item; S.token++;
   if (!item || item.kind === "none") { S.started = false; return start(); }
   if (item.kind === "intro") return renderIntro(item);
   if (item.kind === "quiz") return renderQuiz(item);
@@ -600,53 +730,46 @@ function show(item) {
 async function submit(text, alts = [], gaveUp = false) {
   if (S.phase !== "quiz" || !S.card || S.busy) return;
   S.busy = true; STT.stop(); TTS.stop();
-  const card = S.card, token = ++S.fbToken;
+  const card = S.card, token = ++S.token;
   orb.set("thinking");
   let c;
-  try {
-    c = await api("/check", { card_id: card.card_id, text, alts, hinted: S.hinted, gave_up: gaveUp });
-  } catch (e) { S.busy = false; orb.set("idle"); toast(e.message); return; }
+  try { c = await api("/check", { card_id: card.card_id, text, alts, hinted: S.hinted, gave_up: gaveUp }); }
+  catch (e) { S.busy = false; orb.set("idle"); toast(e.message); return; }
   S.busy = false;
-  if (c.verdict === "retry") {
-    orb.set("idle"); const h = $("#heard"); if (h) h.innerHTML = `<b>${esc(text)}</b> · ${esc(c.line)}`;
-    showComposer(true); TTS.speak(c.speech); return;
-  }
-  S.phase = "feedback"; showComposer(false); compact(true);
+  if (c.verdict === "retry") { orb.set("idle"); showDock(true); speakLine($("#line"), c.speech); return; }
+
+  S.phase = "feedback"; showDock(false); layout("compact");
   orb.flash(c.verdict === "wrong" ? "wrong" : "correct"); orb.kick(.6);
   setView(feedbackHTML(c, gaveUp ? "" : text));
+  setStatus(c.verdict === "correct" ? "" : "Tap Next when you're ready", true);
   say(`${c.line} ${jp(c.card)}, ${c.card.romaji}, ${c.card.meaning}`);
-  setStatus(c.verdict === "correct" ? "" : "Tap Next when you're ready");
   $("#sayAns").onclick = () => TTS.speak([{ t: jp(c.card), lang: "ja" }]);
+  const spoken = speakLine($("#line"), c.speech);
 
   if (c.verdict === "correct") {
     const saved = commit(card.card_id, c.result);
-    const spoken = TTS.speak(c.speech).then(() => sleep(TTS.muted ? 650 : 200));
     let skip = false;
-    $("#nextBtn").onclick = () => { skip = true; TTS.stop(); };
-    await Promise.race([spoken, new Promise(r => { const b = $("#nextBtn"); b.addEventListener("click", r, { once: true }); })]);
-    const d = await saved; if (!d || token !== S.fbToken) return;
+    const tapped = new Promise(r => $("#nextBtn").addEventListener("click", () => { skip = true; TTS.stop(); r(); }, { once: true }));
+    await Promise.race([spoken.then(() => sleep(TTS.muted ? 700 : 250)), tapped]);
+    const d = await saved; if (!d || token !== S.token) return;
     advance(d, skip);
   } else {
-    TTS.speak(c.speech);
     const go = async result => {
       $("#nextBtn").disabled = true; const rb = $("#rightBtn"); if (rb) rb.disabled = true;
-      TTS.stop(); const d = await commit(card.card_id, result); if (d && token === S.fbToken) advance(d, true);
+      TTS.stop(); const d = await commit(card.card_id, result); if (d && token === S.token) advance(d, true);
     };
     $("#nextBtn").onclick = () => go(c.result);
-    $("#rightBtn").onclick = () => { toast("Counted as right 👍"); go("good"); };
+    $("#rightBtn").onclick = () => { toast("Counted as right"); go("good"); };
   }
 }
 
 async function commit(cardId, result) {
-  try {
-    const d = await api("/answer", { card_id: cardId, result });
-    S.done++; return d;
-  } catch (e) { toast(e.message); S.phase = "quiz"; return null; }
+  try { const d = await api("/answer", { card_id: cardId, result }); S.done++; return d; }
+  catch (e) { toast(e.message); S.phase = "quiz"; return null; }
 }
 
 async function advance(d, quiet) {
-  if (d.hype && !quiet) { toast(d.hype); await TTS.speak([{ t: d.hype, lang: "en" }]); }
-  else if (d.hype) toast(d.hype);
+  if (d.hype) { toast(d.hype); if (!quiet) await TTS.speak([{ t: d.hype, lang: "en" }]); }
   show(d.next);
 }
 
@@ -655,27 +778,25 @@ async function listen() {
   if (STT.on) { STT.stop(); return; }
   TTS.stop();
   const lang = S.card.direction === "production" ? "ja-JP" : "en-US";
-  const heard = $("#heard");
-  orb.set("listening"); $("#micBtn").classList.add("on");
+  const line = $("#line");
+  orb.set("listening"); $("#micWrap").classList.add("on");
   setStatus(lang === "ja-JP" ? "Listening… (Japanese)" : "Listening…");
   try {
-    const r = await STT.listen(lang, t => { if (heard) heard.innerHTML = `<b>${esc(t)}</b>`; });
-    $("#micBtn").classList.remove("on"); orb.set("idle");
-    if (!r) { setStatus("Didn't catch that. Tap to try again"); return; }
+    const r = await STT.listen(lang, t => { if (line) { line.classList.add("heard"); line.textContent = t; } });
+    $("#micWrap").classList.remove("on"); orb.set("idle");
+    if (!r) { setStatus("Didn't catch that. Tap the mic to try again", true); return; }
     submit(r.text, r.alts);
   } catch (e) {
-    $("#micBtn").classList.remove("on"); orb.set("idle");
-    setStatus("Type your answer");
-    toast(e === "not-allowed" || e === "service-not-allowed" ? "Mic is blocked. Allow it in the browser, or just type." : `Voice input error: ${e}`, 3500);
+    $("#micWrap").classList.remove("on"); orb.set("idle"); setStatus("Type your answer", true);
+    S.typing = true; showDock(true);
+    toast(e === "not-allowed" || e === "service-not-allowed" ? "Mic is blocked. Allow it in the browser, or type instead." : `Voice input error: ${e}`, 3500);
   }
 }
 
 function hint() {
   if (S.phase !== "quiz" || !S.card) return;
   const v = S.card, h = $("#hint"); S.hinted = true;
-  h.textContent = v.direction === "recognition"
-    ? `${v.romaji} · starts with “${first(v.meaning)[0]}”`
-    : `${jp(v)[0]}… (${v.romaji.slice(0, 2)}…)`;
+  h.textContent = v.direction === "recognition" ? `${v.romaji} · starts with “${first(v.meaning)[0]}”` : `${jp(v)[0]}… (${v.romaji.slice(0, 2)}…)`;
   h.hidden = false;
 }
 
@@ -690,7 +811,7 @@ async function moreWords() {
 }
 
 async function endSession() {
-  closeSheet(); TTS.stop(); STT.stop(); orb.set("thinking"); setStatus("Saving…");
+  closeSheet(); TTS.stop(); STT.stop(); orb.set("thinking"); setStatus("Saving…", true);
   try { const d = await api("/end", {}); orb.set("idle"); S.started = false; renderSummary(d); }
   catch (e) { orb.set("idle"); toast(e.message); }
 }
@@ -706,30 +827,31 @@ function closeSheet() {
   const sh = $("#sheet"), sc = $("#scrim");
   if (sh.hidden) return;
   sh.classList.remove("open"); sc.classList.remove("open");
-  setTimeout(() => { sh.hidden = true; sc.hidden = true; }, 300);
+  setTimeout(() => { sh.hidden = true; sc.hidden = true; }, 320);
 }
 $("#scrim").onclick = closeSheet;
-
-const X_BTN = `<button class="icon-btn x" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
-function sw(id, on) { return `<button class="switch" role="switch" id="${id}" aria-checked="${on}"></button>`; }
+const X_BTN = `<button class="glass-btn x" aria-label="Close"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+const sw = (id, on) => `<button class="switch" role="switch" id="${id}" aria-checked="${on}"></button>`;
 
 async function openMenu() {
   openSheet(`<h2 id="sheetTitle">Your Japanese ${X_BTN}</h2><div class="scroll">
-    <div id="statsBox" class="stats"><div class="stat"><b>–</b><span>words</span></div><div class="stat"><b>–</b><span>due</span></div><div class="stat"><b>–</b><span>streak</span></div></div>
+    <div id="statsBox" class="stats"><div class="stat"><b>–</b><span>words</span></div><div class="stat"><b>–</b><span>due now</span></div><div class="stat"><b>–</b><span>day streak</span></div></div>
     <div class="toggle"><div>Hands-free<small>Starts listening after each question</small></div>${sw("hfSw", S.handsFree)}</div>
     <div class="toggle"><div>Show romaji<small>Under the kana while you answer</small></div>${sw("roSw", S.romaji)}</div>
+    <div class="toggle"><div>Type by default<small>Show the text box instead of the mic</small></div>${sw("tySw", S.typing)}</div>
     <div class="menu-actions">
       <button id="mAsk" class="btn ghost">Ask the tutor</button>
       <button id="mMore" class="btn ghost">+3 new words</button>
       <button id="mEnd" class="btn primary">End session</button>
     </div>
-    <p id="syncLine" class="src" style="text-align:center;margin-top:12px"></p></div>`);
+    <p id="syncLine" class="meta-line"></p></div>`);
   const toggle = (id, key) => $("#" + id).onclick = e => {
     const on = e.currentTarget.getAttribute("aria-checked") !== "true";
     e.currentTarget.setAttribute("aria-checked", on); S[key] = on; store.set(key, on);
     if (key === "romaji" && S.phase === "quiz" && S.card?.direction === "recognition") { const h = $("#hint"); h.hidden = !on; if (on) h.textContent = S.card.romaji; }
+    if (key === "typing" && S.phase === "quiz") showDock(true);
   };
-  toggle("hfSw", "handsFree"); toggle("roSw", "romaji");
+  toggle("hfSw", "handsFree"); toggle("roSw", "romaji"); toggle("tySw", "typing");
   $("#mAsk").onclick = openAsk; $("#mMore").onclick = moreWords; $("#mEnd").onclick = endSession;
   try {
     const p = await api("/progress");
@@ -737,37 +859,35 @@ async function openMenu() {
       [p.words, "words"], [p.due, "due now"], [p.streak ? `🔥 ${p.streak}` : 0, "day streak"],
       [p.today, "answers today"], [p.solid, "solid (21d+)"], [`${p.batches_unlocked}/${p.batches_total}`, "starter sets"],
     ].map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${s}</span></div>`).join("");
-    const shaky = p.shakiest?.length ? `Shakiest: ${p.shakiest.join("、")} · ` : "";
-    $("#syncLine").textContent = shaky + p.sync;
-  } catch { $("#syncLine").textContent = "Couldn't load stats"; }
+    $("#syncLine").textContent = (p.shakiest?.length ? `Shakiest: ${p.shakiest.join("、")} · ` : "") + p.sync;
+  } catch { $("#syncLine").textContent = "Couldn't load your stats"; }
 }
 
 function openAsk() {
   if (!S.ask.enabled) {
-    openSheet(`<h2 id="sheetTitle">Ask the tutor ${X_BTN}</h2><p class="empty-note">Ask mode uses Claude Haiku (fast, cheap) to answer questions and turn anime lines into cards. Turn it on by adding <code>ANTHROPIC_API_KEY=…</code> to the server's <code>.env</code> and running <code>docker compose up -d</code>.<br><br>Until then, you can ask in the Claude app with the Japanese Tutor connector on.</p>`);
+    openSheet(`<h2 id="sheetTitle">Ask the tutor ${X_BTN}</h2><p class="note">Ask mode uses Claude Haiku to answer questions and turn anime lines into cards. Turn it on by adding <code>ANTHROPIC_API_KEY=…</code> to the server's <code>.env</code>, then run <code>docker compose up -d</code>.<br><br>Until then, ask in the Claude app with the Japanese Tutor connector turned on.</p>`);
     return;
   }
   openSheet(`<h2 id="sheetTitle">Ask the tutor ${X_BTN}</h2>
-    <div class="scroll" id="chatScroll"><div class="chat" id="chat">${S.ask.history.length ? "" : `<div class="empty-note">Ask anything (“why is it を not は?”) or paste a line from a show and I'll save the useful words.</div>`}</div></div>
+    <div class="scroll" id="chatScroll"><div class="chat" id="chat">${S.ask.history.length ? "" : `<p class="note">Ask anything, like “why is it を and not は?”, or paste a line from a show and I'll save the useful words.</p>`}</div></div>
     <form id="askForm" class="bar"><input id="askInput" placeholder="Ask or paste a line" autocomplete="off" enterkeyhint="send" aria-label="Ask the tutor">
-      <button id="askMic" class="round mic" type="button" aria-label="Ask by voice" ${STT.ok ? "" : "hidden"}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
-      <button class="round send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button></form>`);
+      <button id="askMic" class="send" type="button" aria-label="Ask by voice" ${STT.ok ? "" : "hidden"} style="background:var(--glass-hi);color:var(--accent-text);border:1px solid var(--glass-edge)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
+      <button class="send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button></form>`);
   const chat = $("#chat");
   for (const m of S.ask.history) chat.insertAdjacentHTML("beforeend", `<div class="msg ${m.role === "user" ? "user" : "bot"}">${esc(m.content)}</div>`);
   const scroll = () => { const s = $("#chatScroll"); s.scrollTop = s.scrollHeight; };
   scroll();
   const send = async text => {
     text = text.trim(); if (!text) return;
-    $("#askInput").value = "";
-    chat.querySelector(".empty-note")?.remove();
+    $("#askInput").value = ""; chat.querySelector(".note")?.remove();
     S.ask.history.push({ role: "user", content: text });
-    chat.insertAdjacentHTML("beforeend", `<div class="msg user">${esc(text)}</div><div class="msg bot thinking" id="pending">…</div>`); scroll();
+    chat.insertAdjacentHTML("beforeend", `<div class="msg user">${esc(text)}</div><div class="msg bot thinking" id="pending">Thinking…</div>`); scroll();
     orb.set("thinking");
     try {
       const d = await api("/ask", { messages: S.ask.history.slice(-10), card_id: S.card?.card_id });
       S.ask.history.push({ role: "assistant", content: d.reply });
       const p = $("#pending"); p.classList.remove("thinking"); p.removeAttribute("id");
-      p.innerHTML = esc(d.reply) + (d.added?.length ? `<span class="added">Saved: ${d.added.map(esc).join("、")} <button class="btn small ghost" id="quizNew" style="margin-left:6px">Quiz me</button></span>` : "");
+      p.innerHTML = esc(d.reply) + (d.added?.length ? `<span class="added">Saved ${d.added.map(esc).join("、")} <button class="btn small ghost" id="quizNew">Quiz me</button></span>` : "");
       if (d.item) $("#quizNew")?.addEventListener("click", () => { closeSheet(); show(d.item); });
       scroll(); orb.set("idle");
       TTS.speak(splitLangs(d.reply));
@@ -776,10 +896,10 @@ function openAsk() {
   $("#askForm").onsubmit = e => { e.preventDefault(); send($("#askInput").value); };
   $("#askMic").onclick = async () => {
     if (STT.on) return STT.stop();
-    TTS.stop(); $("#askMic").classList.add("on"); orb.set("listening");
+    TTS.stop(); orb.set("listening");
     try { const r = await STT.listen("en-US", t => $("#askInput").value = t); if (r) send(r.text); }
     catch (e) { toast(`Voice input error: ${e}`); }
-    finally { $("#askMic")?.classList.remove("on"); orb.set("idle"); }
+    finally { orb.set("idle"); }
   };
 }
 
@@ -793,16 +913,15 @@ function setMuted(m) {
 $("#muteBtn").onclick = () => { setMuted(!TTS.muted); toast(TTS.muted ? "Voice off" : "Voice on", 1200); };
 $("#menuBtn").onclick = openMenu;
 $("#orbBtn").onclick = () => {
-  if (!S.started && S.phase !== "summary") return start();
-  if (S.phase === "summary") { S.started = false; return start(); }
-  if (S.phase === "quiz") return STT.ok ? listen() : $("#input").focus();
+  if (S.phase === "welcome" || S.phase === "summary") { S.started = false; return start(); }
+  if (S.phase === "quiz") return STT.ok && !S.typing ? listen() : $("#input").focus();
   if (S.phase === "feedback") return $("#nextBtn")?.click();
   if (S.phase === "intro") return $("#goQuiz")?.click();
   if (S.phase === "empty") return moreWords();
 };
 $("#micBtn").onclick = listen;
+$("#kbBtn").onclick = () => { S.typing = !S.typing; showDock(true); if (S.typing) $("#input").focus(); };
 $("#hintBtn").onclick = hint;
-$("#dunnoBtn").onclick = () => submit("", [], true);
 $("#input").addEventListener("input", e => { $("#sendBtn").disabled = !e.target.value.trim(); });
 $("#form").onsubmit = e => { e.preventDefault(); const v = $("#input").value.trim(); if (v) submit(v); };
 document.addEventListener("keydown", e => {
@@ -817,7 +936,7 @@ document.addEventListener("visibilitychange", () => { if (document.hidden) { TTS
 
 setMuted(TTS.muted);
 renderWelcome();
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && !window.JPT_DEMO) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
 </body>
 </html>

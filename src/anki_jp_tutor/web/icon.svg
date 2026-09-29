@@ -1,16 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <radialGradient id="a" cx="35%" cy="38%" r="55%"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#22d3ee" stop-opacity="0"/></radialGradient>
-    <radialGradient id="b" cx="68%" cy="42%" r="55%"><stop offset="0" stop-color="#ec4899"/><stop offset="1" stop-color="#ec4899" stop-opacity="0"/></radialGradient>
-    <radialGradient id="c" cx="50%" cy="72%" r="55%"><stop offset="0" stop-color="#6366f1"/><stop offset="1" stop-color="#6366f1" stop-opacity="0"/></radialGradient>
-    <radialGradient id="h" cx="36%" cy="28%" r="40%"><stop offset="0" stop-color="#fff" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-    <clipPath id="o"><circle cx="256" cy="256" r="168"/></clipPath>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="#07080c"/>
-  <g clip-path="url(#o)">
-    <rect width="512" height="512" fill="#06070b"/>
-    <rect width="512" height="512" fill="url(#c)"/><rect width="512" height="512" fill="url(#a)"/><rect width="512" height="512" fill="url(#b)"/>
-    <rect width="512" height="512" fill="url(#h)"/>
-  </g>
-  <circle cx="256" cy="256" r="167" fill="none" stroke="#fff" stroke-opacity=".12" stroke-width="3"/>
+  <defs><radialGradient id="g" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff6e6"/><stop offset=".35" stop-color="#ffd1a3" stop-opacity=".9"/><stop offset="1" stop-color="#ff8a3d" stop-opacity="0"/></radialGradient></defs>
+  <rect width="512" height="512" rx="112" fill="#f7f2ef"/>
+  <circle cx="284.7" cy="264.9" r="150" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="262.7" cy="285.3" r="142" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="234.0" cy="276.4" r="134" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="227.3" cy="247.2" r="126" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="249.3" cy="226.8" r="118" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="278.0" cy="235.6" r="110" fill="#ffbe8c" fill-opacity=".13" stroke="#ff6e28" stroke-opacity=".55" stroke-width="5"/>
+  <circle cx="256" cy="256" r="120" fill="url(#g)"/>
 </svg>
