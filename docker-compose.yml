@@ -1,0 +1,32 @@
+# Tutor server + Tailscale sidecar that gives it a public HTTPS URL (Funnel):
+#   https://jp-tutor.<your-tailnet>.ts.net/mcp/<secret>
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: ${TS_HOSTNAME:-jp-tutor}
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:?set TS_AUTHKEY in .env}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./tailscale:/config:ro
+    restart: unless-stopped
+
+  tutor:
+    build: .
+    network_mode: service:tailscale   # only reachable through the tunnel, no open ports
+    depends_on: [tailscale]
+    environment:
+      - ANKIWEB_USERNAME=${ANKIWEB_USERNAME:-}
+      - ANKIWEB_PASSWORD=${ANKIWEB_PASSWORD:-}
+      - JP_TUTOR_DECK=${JP_TUTOR_DECK:-Japanese Tutor}
+      - JP_TUTOR_PRODUCTION_CARDS=${JP_TUTOR_PRODUCTION_CARDS:-false}
+      - PUBLIC_URL=${PUBLIC_URL:-}
+    volumes:
+      - tutor-data:/data
+    restart: unless-stopped
+
+volumes:
+  ts-state:
+  tutor-data:

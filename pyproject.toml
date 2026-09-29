@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anki-jp-tutor"
+version = "0.1.0"
+description = "Casual Japanese tutor MCP server backed by Anki (works as a Claude custom connector)"
+requires-python = ">=3.10"
+dependencies = [
+  "anki>=25.9",
+  "mcp>=1.27,<2",
+]
+
+[project.scripts]
+anki-jp-tutor = "anki_jp_tutor.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
