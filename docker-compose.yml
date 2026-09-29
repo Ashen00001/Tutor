@@ -23,6 +23,10 @@ services:
       - JP_TUTOR_DECK=${JP_TUTOR_DECK:-Japanese Tutor}
       - JP_TUTOR_PRODUCTION_CARDS=${JP_TUTOR_PRODUCTION_CARDS:-false}
       - PUBLIC_URL=${PUBLIC_URL:-}
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+      - ELEVENLABS_VOICE_ID=${ELEVENLABS_VOICE_ID:-}
+      - ELEVENLABS_MODEL=${ELEVENLABS_MODEL:-eleven_v4_turbo}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - tutor-data:/data
     restart: unless-stopped

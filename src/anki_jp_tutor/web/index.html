@@ -216,6 +216,9 @@ ruby rt { font-size: .5em; color: var(--ink-2); }
 .switch[aria-checked="true"] { background: var(--accent); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
 .menu-actions { display: grid; gap: 10px; margin-top: 18px; }
+.select { appearance: none; -webkit-appearance: none; max-width: 170px; height: 38px; padding: 0 30px 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--ink);
+  background: var(--glass-hi) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a6961' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
+  border: 1px solid var(--glass-edge); }
 .note { color: var(--ink-2); font-size: 15px; line-height: 1.55; }
 .meta-line { text-align: center; font-size: 13px; color: var(--ink-3); margin-top: 14px; }
 code { background: rgba(255, 106, 26, .1); padding: 1px 6px; border-radius: 6px; font-size: .9em; }
@@ -311,10 +314,12 @@ const ORB_FS = `
 precision highp float;
 uniform vec2 res; uniform float t; uniform float lvl; uniform vec3 tint; uniform float tintAmt;
 vec3 pal(float k){
-  vec3 a = vec3(1.00, 0.33, 0.06);
-  vec3 b = vec3(1.00, 0.55, 0.16);
-  vec3 c = vec3(1.00, 0.78, 0.46);
-  return k < 0.5 ? mix(a, b, k*2.0) : mix(b, c, k*2.0 - 1.0);
+  vec3 a = vec3(1.00, 0.30, 0.10);
+  vec3 b = vec3(1.00, 0.52, 0.10);
+  vec3 c = vec3(1.00, 0.76, 0.22);
+  vec3 e = vec3(1.00, 0.44, 0.34);
+  k = fract(k) * 4.0;
+  return k < 1.0 ? mix(a, b, k) : k < 2.0 ? mix(b, c, k - 1.0) : k < 3.0 ? mix(c, e, k - 2.0) : mix(e, a, k - 3.0);
 }
 void main(){
   vec2 uv = (gl_FragCoord.xy - 0.5*res) / min(res.x, res.y);
@@ -327,29 +332,34 @@ void main(){
     float dirn = mod(fi, 2.0) < 0.5 ? 1.0 : -1.0;
     float ang = t*(0.2 + 0.08*fi)*dirn + fi*1.047;
     float off = 0.2 + 0.07*sin(t*0.8 + fi*1.3) + lvl*0.22;
-    float rad = 0.78 - 0.05*fi + 0.05*sin(t*0.9 + fi*2.1);
-    vec2 dir = vec2(cos(ang), sin(ang));
-    float d = length(p - dir*off) - rad;
+    float rad = 0.74 - 0.045*fi + 0.05*sin(t*0.9 + fi*2.1);
+    vec2 ctr = vec2(cos(ang), sin(ang)) * off;
+    float dc = length(p - ctr);
+    float d = dc - rad;
     float na = ang + 2.3 + 0.5*sin(t*0.6 + fi);
-    vec2 nd = vec2(cos(na), sin(na));
-    float dn = length(p - nd*(rad*0.9 + off)) - (0.42 + 0.05*fi);
+    float dn = length(p - vec2(cos(na), sin(na))*(rad*0.9 + off)) - (0.40 + 0.05*fi);
     d = max(d, -dn);
-    float inside = smoothstep(0.025, -0.025, d);
-    float rim = smoothstep(-0.3, 0.0, d);
-    float a = inside * (0.07 + 0.5*rim*rim*rim);
-    vec3 c = mix(pal(0.72 + 0.1*sin(fi)), pal(0.08 + 0.05*fi), rim);
+    float edge = smoothstep(0.012, -0.012, d);
+    float q = clamp(dc / rad, 0.0, 1.0);
+    float body = mix(0.72, 0.36, smoothstep(0.15, 1.0, q));
+    float a = edge * body;
+    float k = 0.05 + fi*0.23 + 0.05*sin(t*0.4 + fi);
+    vec3 c = mix(pal(k), vec3(1.0, 0.86, 0.6), (1.0 - q)*0.35);
     acc += c * a * keep;
     keep *= 1.0 - a;
   }
-  vec3 col = acc; float A = 1.0 - keep;
-  float innerA = clamp(exp(-r*r*3.4) * (0.34 + lvl*0.3), 0.0, 1.0);
-  col = col*(1.0 - innerA) + vec3(1.0, 0.66, 0.3)*innerA; A = A + innerA*(1.0 - A);
-  float coreA = clamp(exp(-r*r*9.0) * (1.0 + lvl*0.3), 0.0, 1.0);
-  col = col*(1.0 - coreA) + vec3(1.0, 0.97, 0.88)*coreA; A = A + coreA*(1.0 - A);
-  float haloA = exp(-r*r*1.05) * (0.14 + lvl*0.28) * (1.0 - A);
-  col += vec3(1.0, 0.52, 0.16)*haloA; A += haloA;
-  col = mix(col, tint * A, tintAmt*0.45);
-  gl_FragColor = vec4(col, A);
+  float A = 1.0 - keep;
+  vec3 u = A > 0.0005 ? acc / A : vec3(1.0, 0.6, 0.2);
+  float corona = clamp(exp(-r*r*4.5) * (0.32 + lvl*0.4), 0.0, 1.0);
+  float sun = clamp(exp(-r*r*15.0) * (1.15 + lvl*0.5), 0.0, 1.0);
+  u = 1.0 - (1.0 - u) * (1.0 - vec3(1.0, 0.70, 0.28)*corona);
+  u = 1.0 - (1.0 - u) * (1.0 - vec3(1.0, 0.98, 0.90)*sun);
+  A = A + clamp(sun + corona*0.45, 0.0, 1.0)*(1.0 - A);
+  float haloA = exp(-r*r*1.0) * (0.16 + lvl*0.3) * (1.0 - A);
+  u = mix(u, vec3(1.0, 0.55, 0.18), haloA / max(A + haloA, 0.0005));
+  A += haloA;
+  u = mix(u, tint, tintAmt*0.4);
+  gl_FragColor = vec4(u*A, A);
 }`;
 
 class Orb {
@@ -396,6 +406,8 @@ class Orb {
       this.t += dt * speed * (this.slow ? .4 : 1) * (1 + this.level);
       const base = { idle: .04, listening: .22, speaking: .26, thinking: .16 }[this.state] ?? .04;
       let target = base + Math.sin(now / 1300) * .03 + this.kickV * .6;
+      const m = this.meter?.();
+      if (m != null) target = Math.max(target, .12 + m * 2.2);
       if (this.state === "speaking") target += (Math.sin(now / 110) * .5 + .5) * .12;
       if (this.state === "listening") target += (Math.sin(now / 190) * .5 + .5) * .08;
       this.level += (target - this.level) * .12; this.kickV *= .9;
@@ -463,19 +475,113 @@ const TTS = {
     const want = lang === "ja" ? "ja" : "en";
     const vs = this.voices.filter(v => v.lang.toLowerCase().replace("_", "-").startsWith(want));
     const prefs = lang === "ja"
-      ? [/Nanami.*Natural/i, /Natural/i, /Google 日本語/, /Kyoko|O-ren|Otoya|Hattori/i, /Haruka|Ayumi|Sayaka|Ichiro/i]
-      : [/(Aria|Jenny|Ava|Andrew|Emma).*Natural/i, /Natural/i, /Google US English/i, /Samantha|Ava|Allison|Zira/i];
-    for (const p of prefs) { const v = vs.find(v => p.test(v.name) && (want === "ja" || /en-US/i.test(v.lang) || /Natural/i.test(v.name))); if (v) return v; }
-    return vs.find(v => /(ja-JP|en-US)/i.test(v.lang.replace("_", "-"))) || vs[0] || null;
+      ? [/Google 日本語/, /Kyoko|O-ren|Otoya|Hattori|Eddy|Flo|Reed|Sandy|Shelley/i, /^(?!.*Microsoft)/, /Nanami.*Natural/i, /Natural/i]
+      : [/Google US English/i, /Samantha|Ava|Allison|Evan|Zoe|Nathan/i, /^(?!.*Microsoft).*(en-US|US)/i, /^(?!.*Microsoft)/, /(Aria|Jenny|Ava|Andrew|Emma).*Natural/i];
+    for (const p of prefs) { const v = vs.find(v => p.test(v.name)); if (v) return v; }
+    return vs[0] || null;
   },
-  unlock() { if (this.ok) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } },
-  stop() { this.gen++; if (this.ok) speechSynthesis.cancel(); if (this.done) { const d = this.done; this.done = null; d(); } },
+  unlock() {
+    if (this.ok) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); }
+    try {
+      this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
+      this.ctx.resume?.();
+      if (!this.analyser) {
+        this.analyser = this.ctx.createAnalyser(); this.analyser.fftSize = 512; this.analyser.connect(this.ctx.destination);
+        this.buf = new Float32Array(this.analyser.fftSize);
+      }
+    } catch {}
+  },
+  /* ElevenLabs through the server. Clips are cached here and on the server. */
+  cloud: null, clips: new Map(), src: null,
+  joined(segs) {
+    let out = "", ranges = [];
+    segs.forEach((s, i) => {
+      const t = s.t.trim(); if (!t) { ranges.push([out.length, out.length]); return; }
+      if (out) out += segs[i - 1]?.lang === "ja" && s.lang === "en" ? ", " : " ";
+      ranges.push([out.length, out.length + t.length]); out += t;
+    });
+    return { text: out, ranges };
+  },
+  async clip(text) {
+    const key = `${this.cloud.voice || ""}|${text}`;
+    if (!this.clips.has(key)) {
+      const p = (async () => {
+        const q = new URLSearchParams({ text }); if (this.cloud.voice) q.set("voice", this.cloud.voice);
+        const r = await fetch(`${API}/tts?${q}`);
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Voice error ${r.status}`);
+        return await this.ctx.decodeAudioData(await r.arrayBuffer());
+      })();
+      this.clips.set(key, p);
+      p.catch(() => this.clips.delete(key));
+      if (this.clips.size > 200) this.clips.delete(this.clips.keys().next().value);
+    }
+    return this.clips.get(key);
+  },
+  prefetch(segs) { if (this.cloud && this.ctx && !this.muted && segs?.length) this.clip(this.joined(segs).text).catch(() => {}); },
+  level() {
+    if (!this.src || !this.analyser) return null;
+    this.analyser.getFloatTimeDomainData(this.buf);
+    let sum = 0; for (const v of this.buf) sum += v * v;
+    return Math.sqrt(sum / this.buf.length);
+  },
+  async cloudSpeak(segs, hooks, gen) {
+    const { text, ranges } = this.joined(segs);
+    orb.set("thinking");
+    const buffer = await this.clip(text);
+    if (gen !== this.gen) return;
+    const src = this.ctx.createBufferSource(); src.buffer = buffer; src.connect(this.analyser);
+    this.src = src; orb.meter = () => this.level();
+    // Spread segments over the clip by length (kana/kanji take longer to say than latin letters).
+    const w = segs.map((s, i) => [...text.slice(ranges[i][0], ranges[i][1])].reduce((n, ch) => n + (/[\u3040-\u9fff]/.test(ch) ? 2.3 : 1), 0) + 2);
+    const total = w.reduce((a, b) => a + b, 0) || 1;
+    let acc = 0; const bounds = w.map(x => (acc += x) / total);
+    await new Promise(resolve => {
+      let seg = -1, raf = 0;
+      const done = () => { cancelAnimationFrame(raf); if (this.src === src) { this.src = null; orb.meter = null; } resolve(); };
+      this.done = done;
+      src.onended = done;
+      const t0 = this.ctx.currentTime + 0.02;
+      src.start(t0); orb.set("speaking");
+      const tick = () => {
+        if (gen !== this.gen) return done();
+        const f = Math.min(1, Math.max(0, (this.ctx.currentTime - t0) / buffer.duration));
+        const i = bounds.findIndex(b => f <= b);
+        if (i !== seg && i >= 0) { if (seg >= 0) hooks.segEnd?.(seg); seg = i; hooks.seg?.(i); }
+        if (i >= 0) {
+          const start = i ? bounds[i - 1] : 0, frac = (f - start) / Math.max(1e-6, bounds[i] - start);
+          hooks.word?.(i, Math.floor(frac * segs[i].t.length));
+        }
+        raf = requestAnimationFrame(tick);
+      };
+      tick();
+    });
+    if (gen === this.gen) { this.done = null; hooks.end?.(); setOrbIdle(); }
+  },
+  stop() {
+    this.gen++;
+    try { this.src?.stop(); } catch {}
+    this.src = null; orb.meter = null;
+    if (this.ok) speechSynthesis.cancel();
+    if (this.done) { const d = this.done; this.done = null; d(); }
+  },
   /* segs: [{t, lang}]. hooks.seg(i) fires as segment i starts, hooks.word(i, charIndex) on word boundaries. */
   speak(segs, hooks = {}) {
     this.stop();
     if (!segs || !segs.length) return Promise.resolve();
-    if (this.muted || !this.ok) { segs.forEach((_, i) => hooks.seg?.(i, true)); orb.kick(.35); return Promise.resolve(); }
+    if (this.muted || (!this.ok && !this.cloud)) { segs.forEach((_, i) => hooks.seg?.(i, true)); orb.kick(.35); return Promise.resolve(); }
     const gen = this.gen;
+    if (this.cloud && this.ctx) {
+      return this.cloudSpeak(segs, hooks, gen).catch(e => {
+        if (gen !== this.gen) return;
+        console.warn("cloud voice failed, using browser voice", e);
+        if (!this.warned) { this.warned = true; toast("ElevenLabs voice failed, using the browser voice"); }
+        return this.browserSpeak(segs, hooks, gen);
+      });
+    }
+    return this.browserSpeak(segs, hooks, gen);
+  },
+  browserSpeak(segs, hooks, gen) {
+    if (!this.ok) return Promise.resolve();
     return new Promise(resolve => {
       this.done = resolve;
       let i = 0;
@@ -632,6 +738,7 @@ async function renderIntro(item) {
     TTS.speak([{ t: jp(v), lang: "ja" }, { t: first(v.meaning), lang: "en" }], { end: () => b.classList.remove("on") });
   });
   $("#goQuiz").onclick = () => show(item.first);
+  if (item.first?.speech) TTS.prefetch(item.first.speech);
   say(`New words: ${item.cards.map(v => `${jp(v)}, ${v.meaning}`).join("; ")}`);
   await TTS.speak(item.speech, {
     seg: i => { const n = i === 0 ? -1 : Math.floor((i - 1) / 2); tiles.forEach((t, k) => t.classList.toggle("on", k === n)); },
@@ -710,7 +817,8 @@ async function start() {
   orb.set("thinking"); setStatus("Getting your words…", true);
   try {
     const [cfg, d] = await Promise.all([api("/config").catch(() => ({})), api("/start", {})]);
-    S.ask.enabled = !!cfg.ask; S.stats = d.stats; S.done = 0;
+    S.ask.enabled = !!cfg.ask; S.stats = d.stats; S.done = 0; S.tts = cfg.tts || null;
+    if (S.tts) TTS.cloud = { voice: store.get("voice", null) };
     orb.set("idle"); $("#orbBtn").setAttribute("aria-label", "Talk");
     if (d.unlocked) toast("Unlocked 3 new starter words");
     show(d.item);
@@ -748,6 +856,7 @@ async function submit(text, alts = [], gaveUp = false) {
 
   if (c.verdict === "correct") {
     const saved = commit(card.card_id, c.result);
+    saved.then(d => d?.next?.speech && TTS.prefetch(d.next.speech));
     let skip = false;
     const tapped = new Promise(r => $("#nextBtn").addEventListener("click", () => { skip = true; TTS.stop(); r(); }, { once: true }));
     await Promise.race([spoken.then(() => sleep(TTS.muted ? 700 : 250)), tapped]);
@@ -836,6 +945,9 @@ const sw = (id, on) => `<button class="switch" role="switch" id="${id}" aria-che
 async function openMenu() {
   openSheet(`<h2 id="sheetTitle">Your Japanese ${X_BTN}</h2><div class="scroll">
     <div id="statsBox" class="stats"><div class="stat"><b>–</b><span>words</span></div><div class="stat"><b>–</b><span>due now</span></div><div class="stat"><b>–</b><span>day streak</span></div></div>
+    ${S.tts ? `<div class="toggle"><div>Voice<small>ElevenLabs · ${esc(S.tts.model)}</small></div>
+      <div style="display:flex;gap:8px;align-items:center"><select id="voiceSel" class="select" aria-label="Voice"><option>Loading…</option></select>
+      <button id="voiceTry" class="speak" aria-label="Preview voice">${ICON_SPEAK}</button></div></div>` : ""}
     <div class="toggle"><div>Hands-free<small>Starts listening after each question</small></div>${sw("hfSw", S.handsFree)}</div>
     <div class="toggle"><div>Show romaji<small>Under the kana while you answer</small></div>${sw("roSw", S.romaji)}</div>
     <div class="toggle"><div>Type by default<small>Show the text box instead of the mic</small></div>${sw("tySw", S.typing)}</div>
@@ -853,6 +965,14 @@ async function openMenu() {
   };
   toggle("hfSw", "handsFree"); toggle("roSw", "romaji"); toggle("tySw", "typing");
   $("#mAsk").onclick = openAsk; $("#mMore").onclick = moreWords; $("#mEnd").onclick = endSession;
+  if (S.tts) {
+    api("/voices").then(v => {
+      const cur = TTS.cloud.voice || v.default;
+      $("#voiceSel").innerHTML = v.voices.map(x => `<option value="${esc(x.id)}" ${x.id === cur ? "selected" : ""}>${esc(x.name)}${x.accent ? ` · ${esc(x.accent)}` : ""}</option>`).join("");
+    }).catch(e => { $("#voiceSel").innerHTML = `<option>Couldn't load voices</option>`; });
+    $("#voiceSel").onchange = e => { TTS.cloud.voice = e.target.value; store.set("voice", e.target.value); };
+    $("#voiceTry").onclick = () => TTS.speak([{ t: "Yo! Let's practice.", lang: "en" }, { t: "今日も頑張ろう！", lang: "ja" }]);
+  }
   try {
     const p = await api("/progress");
     $("#statsBox").innerHTML = [

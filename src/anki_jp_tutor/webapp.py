@@ -18,6 +18,7 @@ from .ask import AskClient
 from .furigana import to_ruby_html
 from .store import EASE, TutorError, TutorStore
 from .sync import SyncManager
+from .tts import ElevenLabsTTS, TTSError
 
 T = TypeVar("T")
 WEB = Path(__file__).parent / "web"
@@ -53,7 +54,8 @@ def _with_html(v: dict, store: TutorStore) -> dict:
     return v
 
 
-def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str, ask: AskClient | None) -> None:
+def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str, ask: AskClient | None,
+                 tts: ElevenLabsTTS | None = None) -> None:
     app_base, api = f"/app/{secret}", f"/api/{secret}"
 
     async def run(fn: Callable[[], T]) -> T:
@@ -90,7 +92,28 @@ def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str
     # --------------------------------------------------------------- api
     @mcp.custom_route(api + "/config", methods=["GET"])
     async def config(_: Request) -> Response:
-        return JSONResponse({"ask": ask is not None, "deck": store.deck_name, "sync": sync.enabled})
+        return JSONResponse({"ask": ask is not None, "deck": store.deck_name, "sync": sync.enabled,
+                             "tts": {"provider": "elevenlabs", "model": tts.model} if tts else None})
+
+    @mcp.custom_route(api + "/tts", methods=["GET"])
+    async def speak(req: Request) -> Response:
+        if tts is None:
+            return err(RuntimeError("Voice is off. Add ELEVENLABS_API_KEY to .env to turn it on."), 404)
+        try:
+            audio, hit = await tts.speak(req.query_params.get("text", ""), req.query_params.get("voice") or None)
+        except TTSError as e:
+            return err(e, 502)
+        return Response(audio, media_type="audio/mpeg",
+                        headers={"Cache-Control": "private, max-age=31536000, immutable", "X-Cache": "hit" if hit else "miss"})
+
+    @mcp.custom_route(api + "/voices", methods=["GET"])
+    async def voices(_: Request) -> Response:
+        if tts is None:
+            return JSONResponse({"voices": [], "default": None})
+        try:
+            return JSONResponse({"voices": await tts.voices(), "default": await tts.default_voice_id()})
+        except TTSError as e:
+            return err(e, 502)
 
     @mcp.custom_route(api + "/start", methods=["POST"])
     async def start(req: Request) -> Response:
