@@ -24,6 +24,11 @@ if [ ! -f .env ]; then
   if [ -n "$ANKIWEB_USERNAME" ]; then
     read -rsp "AnkiWeb password (used once to get a login key, then erased): " ANKIWEB_PASSWORD; echo
   fi
+  echo
+  echo "Optional: ElevenLabs key for the good voice + speech-to-text (https://elevenlabs.io → Developers → API keys)."
+  read -rsp "ElevenLabs API key (leave blank to skip): " ELEVENLABS_API_KEY; echo
+  echo "Optional: Anthropic API key for talking with the tutor (https://console.anthropic.com → API keys)."
+  read -rsp "Anthropic API key (leave blank to skip): " ANTHROPIC_API_KEY; echo
   umask 077
   cat > .env <<EOF
 TS_AUTHKEY=$TS_AUTHKEY
@@ -32,6 +37,9 @@ ANKIWEB_USERNAME=$ANKIWEB_USERNAME
 ANKIWEB_PASSWORD=$ANKIWEB_PASSWORD
 JP_TUTOR_DECK=Japanese Tutor
 JP_TUTOR_PRODUCTION_CARDS=false
+ELEVENLABS_API_KEY=$ELEVENLABS_API_KEY
+ELEVENLABS_MODEL=eleven_v4_turbo
+ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 EOF
 fi
 
@@ -55,13 +63,19 @@ fi
 DOMAIN=$($DOCKER compose exec -T tailscale tailscale status --json 2>/dev/null \
   | python3 -c 'import sys, json; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
 PATH_PART=$($DOCKER compose exec -T tutor anki-jp-tutor url | tr -d '\r')
+APP_PART=$($DOCKER compose exec -T tutor anki-jp-tutor app-url | tr -d '\r')
 
 echo
 $DOCKER compose logs tutor 2>/dev/null | grep -E "sync|login" | tail -3 || true
 echo
 if [ -n "$DOMAIN" ]; then
-  echo "Connector URL (keep it private, it works like a password):"
+  echo "App (open on your phone, then Share → Add to Home Screen):"
+  echo "  https://$DOMAIN$APP_PART"
+  echo
+  echo "Claude connector URL (Customize → Connectors → Add custom connector):"
   echo "  https://$DOMAIN$PATH_PART"
+  echo
+  echo "Both links work like passwords. Keep them private."
   echo
   echo "Quick check (should print {\"ok\":true}; Funnel can take a minute the first time):"
   echo "  curl https://$DOMAIN/health"

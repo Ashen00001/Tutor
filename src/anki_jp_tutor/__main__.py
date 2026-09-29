@@ -16,7 +16,7 @@ import secrets
 import sys
 from pathlib import Path
 
-from .ask import AskClient
+from .chat import ChatClient
 from .server import build_server
 from .tts import ElevenLabsTTS
 from .store import TutorStore
@@ -111,14 +111,14 @@ def main() -> None:
 
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8000"))
-    ask = AskClient.from_env(store)
+    chat = ChatClient.from_env(store)
     tts = ElevenLabsTTS.from_env(data)
     origin = public or f"http://{host}:{port}"
     log.info("Connector URL (Claude): %s%s", origin, path)
     log.info("App URL (phone/browser): %s/app/%s/", origin, secret)
-    log.info("%s · ask mode: %s · voice: %s", sync.status(), "on" if ask else "off (set ANTHROPIC_API_KEY)",
+    log.info("%s · conversation: %s · voice: %s", sync.status(), "on" if chat else "off (set ANTHROPIC_API_KEY)",
              f"ElevenLabs {tts.model}" if tts else "browser voices (set ELEVENLABS_API_KEY)")
-    build_server(store, sync, host=host, port=port, path=path, secret=secret, ask=ask, tts=tts).run("streamable-http")
+    build_server(store, sync, host=host, port=port, path=path, secret=secret, chat=chat, tts=tts).run("streamable-http")
 
 
 if __name__ == "__main__":

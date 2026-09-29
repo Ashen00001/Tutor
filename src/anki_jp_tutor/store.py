@@ -363,6 +363,34 @@ class TutorStore:
                 raise TutorError(f"Card {card_id} isn't a tutor card.")
             return self._view(card)
 
+    def known_words(self, limit: int = 120) -> list[tuple[str, str]]:
+        """(word, meaning) for the deck, words already studied first."""
+        with self.lock:
+            cids = self._find("-is:new card:1", order="c.ivl desc") + self._find("is:new card:1", order="c.due asc")
+            out = []
+            for cid in cids[:limit]:
+                n = self.col.get_card(cid).note()  # type: ignore[arg-type]
+                out.append((n["Word"], n["Meaning"]))
+            return out
+
+    def answer_by_word(self, word: str, result: str) -> dict:
+        """Count a word used in conversation as a review of its Japanese -> English card."""
+        if result not in EASE:
+            raise TutorError("result must be again/hard/good/easy")
+        with self.lock:
+            cids = self._cids_for_words([word.strip()])
+            card = next((self.col.get_card(c) for c in cids if self.col.get_card(c).ord == 0), None)  # type: ignore[arg-type]
+            if card is None:
+                raise TutorError(f"'{word}' isn't in the deck")
+            card.start_timer()
+            self.col.sched.answerCard(card, EASE[result])
+            if result == "again":
+                self.col.tags.bulk_add([card.nid], content.TAG_MISSED)
+            card = self.col.get_card(card.id)
+            d = {"word": card.note()["Word"], "result": result, "next_review": self._next_due_text(card)}
+        self.on_change()
+        return d
+
     def raw_example(self, card_id: int) -> str:
         """Example sentence in Anki furigana syntax (the app renders it as <ruby>)."""
         with self.lock:

@@ -93,7 +93,7 @@ window.JPT_DEMO = (() => {
     due: [...cards.values()].filter(c => c.status === "learning" || c.status === "relearning").length, today: answersTotal, streak: answersTotal ? 1 : 0 });
 
   const routes = {
-    "/config": () => ({ ask: false, deck: "Japanese Tutor", sync: false, demo: true }),
+    "/config": () => ({ chat: true, stt: false, tts: null, deck: "Japanese Tutor", sync: false, demo: true }),
     "/start": () => {
       queue = []; log = []; requeues = {}; started = Date.now();
       let unlockedNow = null;
@@ -140,6 +140,23 @@ window.JPT_DEMO = (() => {
       log = []; queue = []; return d;
     },
   };
+  // Scripted conversation so the talk screen can be previewed without a server.
+  const SCRIPT = [
+    "Yo! Ready to talk a bit? First one: how are you feeling today, げんき[genki]?",
+    "Nice. Friends just say げんき with a little rise at the end. Want some みず, or you good?",
+    "Haha fair. Quick one: how would you say \"I'm going too\" with おれ?",
+    "So close! It's おれも いく. You're getting it. What anime are you watching right now?",
+    "Sick. Next time try saying it like this: この アニメ みてる. Go for it!",
+    "This preview only has a few scripted lines. On your server, Claude answers you for real.",
+  ];
+  window.JPT_DEMO_CHAT = async function* (history) {
+    const turn = history.filter(m => m.role === "user").length;
+    const text = SCRIPT[Math.min(turn, SCRIPT.length - 1)];
+    for (const w of text.split(/(\s+)/)) { await new Promise(r => setTimeout(r, 35)); yield { t: "delta", text: w }; }
+    if (turn === 2) yield { t: "reviewed", word: "水", result: "good" };
+    yield { t: "done", text };
+  };
+
   return async (path, body) => {
     await new Promise(r => setTimeout(r, 60));
     const fn = routes[path]; if (!fn) throw new Error("Not available in the preview");

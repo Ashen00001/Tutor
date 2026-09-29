@@ -1,15 +1,17 @@
 # Anki Japanese Tutor
 
-A casual-Japanese tutor that lives in Claude and keeps its memory in an Anki deck. It quizzes you 3 words at a time, goes after the words you keep missing first, saves every answer to Anki's scheduler, and turns lines from shows you're watching into flashcards.
+A casual-Japanese tutor that keeps its memory in an Anki deck. It quizzes you 3 words at a time, goes after the words you keep missing first, saves every answer to Anki's scheduler, talks with you out loud, and turns lines from shows you're watching into flashcards.
 
-It runs as a small server you host once. You add it to Claude as a **custom connector**, and then it works in Claude on your phone, your Surface, and the web.
+It runs as a small server you host once. You can use it two ways:
+- **The app:** a voice app with an animated orb. Open it on your phone or Surface and add it to your home screen. You can practice words, or just talk with the tutor.
+- **Inside Claude:** add the same server as a custom connector, and the tutor tools work in any Claude chat on your phone, Surface, or the web.
 
 ```
-Claude (phone / Surface / web)
-   │  custom connector (HTTPS, secret URL)
-   ▼
-Tailscale Funnel ──► anki-jp-tutor (Docker on your VM)
-                         │  own Anki collection: deck "Japanese Tutor"
+ App (phone / Surface)          Claude (custom connector)
+        │ /app/<secret>                 │ /mcp/<secret>
+        ▼                               ▼
+Tailscale Funnel ──► anki-jp-tutor (Docker on your VM) ──► ElevenLabs (voice + speech-to-text)
+                         │  own Anki collection           └► Claude API (conversation)
                          ▼
                       AnkiWeb (optional) ◄──► Anki / AnkiDroid / AnkiMobile
 ```
@@ -27,17 +29,36 @@ Tailscale Funnel ──► anki-jp-tutor (Docker on your VM)
 unzip anki-jp-tutor.zip && cd anki-jp-tutor    # or: git clone <your repo> && cd anki-jp-tutor
 bash setup.sh
 ```
-It asks for the Tailscale key and, optionally, your AnkiWeb login. Then it builds and starts everything and prints your **connector URL**:
+It asks for the Tailscale key and, optionally, your AnkiWeb login, ElevenLabs key and Anthropic key. Then it builds and starts everything and prints two links:
 ```
-https://jp-tutor.<your-tailnet>.ts.net/mcp/<long-secret>
+App:        https://jp-tutor.<your-tailnet>.ts.net/app/<long-secret>/
+Connector:  https://jp-tutor.<your-tailnet>.ts.net/mcp/<long-secret>
 ```
-Treat that URL like a password: anyone who has it can use your deck.
+Treat both like passwords: anyone who has them can use your deck.
+
+**Open the app** on your phone and use **Share → Add to Home Screen** (iPhone) or **Install app** (Android/Chrome). On the Surface, Edge or Chrome can install it the same way.
 
 **4. Add it to Claude.** On claude.ai go to **Customize → Connectors → + → Add custom connector**, name it "Japanese Tutor", paste the URL and click **Add**. Custom connectors added there also show up in the Claude desktop and mobile apps. (The Free plan allows one custom connector, so if another connector is already using that slot you'd need to swap it out.)
 
 **5. Use it.** In a chat, turn the connector on with **+ → Connectors**, then say *"let's do Japanese"*. You can also pick the **japanese_tutor** prompt from the same menu.
 
-## Keeping it fast
+## The app
+
+- **Practice words.** Three new words at a time, then a quiz. Answer out loud (tap the mic or the orb) or type. Answers are checked instantly on the server, so there's no model in the loop and no waiting. Missed words come back a couple of cards later, and everything is saved to Anki.
+- **Just talk.** A back-and-forth voice conversation. It listens, understands mixed English and Japanese, answers out loud, then listens again. Pick a topic: free talk, コンビニ, meeting a new friend, anime, or ordering ramen. It uses the words in your deck (especially the shaky ones), adds at most one new word at a time, and when you use a deck word correctly it counts as an Anki review. Tap the orb to interrupt it. The ✕ button ends the conversation.
+- **Voice.** Replies are spoken by ElevenLabs **Eleven v4 Turbo**, and the orb pulses with the voice. Pick the voice from the menu. The mute button at the top right turns speech off.
+- **Menu.** Your stats and streak, hands-free mode, romaji under the kana, type-by-default, +3 new words, and End session.
+
+### Keys the app uses (all optional, all stay on the server)
+
+| Key | What it turns on | Where to get it |
+|---|---|---|
+| `ELEVENLABS_API_KEY` | The natural voice (Eleven v4 Turbo) and speech-to-text (Scribe v2), which handles mixed English and Japanese | elevenlabs.io → Developers → API keys |
+| `ANTHROPIC_API_KEY` | Talking with the tutor (Claude Haiku by default: fast and cheap) | console.anthropic.com → API keys. This is billed separately from a Claude Pro plan. |
+
+Without them, the app still quizzes you and uses your browser's built-in voices, skipping Microsoft voices whenever anything else is installed. Audio for lines it has already said is cached on the server, so repeated words play instantly and don't use ElevenLabs credits again.
+
+## Keeping it fast in Claude
 
 - **The server is already fast.** Each tool call takes about 5 ms, and each quiz turn is exactly one call (`jp_answer` saves your answer *and* returns the next card). Nearly all the wait you notice is the model writing its reply.
 - **Pick the fastest model.** For tutor chats, choose **Haiku** in the model picker if your plan shows it. The quiz loop is simple, so a small model handles it well.
@@ -88,6 +109,11 @@ The starter curriculum is 60 casual, high-frequency words in batches of 3. It st
 | `JP_TUTOR_DECK` | `Japanese Tutor` | Deck name |
 | `JP_TUTOR_PRODUCTION_CARDS` | `false` | Also make English → Japanese cards |
 | `JP_TUTOR_SYNC_ENDPOINT` | AnkiWeb | Use a self-hosted Anki sync server instead |
+| `ELEVENLABS_API_KEY` | empty | Natural voice + speech-to-text in the app |
+| `ELEVENLABS_VOICE_ID` | first good premade voice | Pin a voice (or pick one in the app's menu) |
+| `ELEVENLABS_MODEL` | `eleven_v4_turbo` | Voice model |
+| `ANTHROPIC_API_KEY` | empty | Conversation mode in the app |
+| `JP_TUTOR_MODEL` | `claude-haiku-4-5-20251001` | Model for conversation |
 | `JP_TUTOR_FULL_SYNC_CONFLICT` | `download` | If a rare full-sync conflict happens, AnkiWeb wins |
 
 ## Security
@@ -107,6 +133,10 @@ The starter curriculum is 60 casual, high-frequency words in batches of 3. It st
 
 ```bash
 pip install .
-python tests/e2e_test.py
+python tests/e2e_test.py      # MCP tools against real Anki + a local Anki sync server (stand-in for AnkiWeb)
+python tests/voice_test.py    # ElevenLabs voice path (mock API) played in headless Chromium
+python tests/talk_test.py     # conversation: mock Claude streaming + tools, mock speech-to-text, fake microphone
+python tests/ui_test.py URL OUT phone|surface   # quiz flow + screenshots against a running server
+python tools/build_demo.py preview.html          # self-contained UI preview with sample words
 ```
-The end-to-end test uses real Anki plus a local Anki sync server standing in for AnkiWeb. It drives every tool over MCP, checks that a second "phone" collection receives the words and reviews, tests restarts and fresh installs, and reports how long each call takes.
+The tests use real Anki throughout. They check that a second "phone" collection receives the words and reviews, that restarts and fresh installs work, and they time each call.

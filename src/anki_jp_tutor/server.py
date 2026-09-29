@@ -14,7 +14,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from . import content
-from .ask import AskClient
+from .chat import ChatClient
 from .tts import ElevenLabsTTS
 from .store import TutorError, TutorStore, WordInput
 from .sync import SyncManager
@@ -42,7 +42,7 @@ class WordItem(BaseModel):
 
 
 def build_server(store: TutorStore, sync: SyncManager, *, host: str = "0.0.0.0", port: int = 8000,
-                 path: str = "/mcp", secret: str | None = None, ask: "AskClient | None" = None,
+                 path: str = "/mcp", secret: str | None = None, chat: "ChatClient | None" = None,
                  tts: "ElevenLabsTTS | None" = None) -> FastMCP:
     mcp = FastMCP(
         name="anki-jp-tutor",
@@ -193,6 +193,6 @@ def build_server(store: TutorStore, sync: SyncManager, *, host: str = "0.0.0.0",
         return JSONResponse({"ok": True})
 
     if secret:
-        register_web(mcp, store, sync, secret, ask, tts)
+        register_web(mcp, store, sync, secret, chat, tts)
 
     return mcp

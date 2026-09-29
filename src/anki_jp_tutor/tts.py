@@ -7,6 +7,7 @@ The tutor repeats the same words and lines a lot, so every clip is cached by
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import os
@@ -37,11 +38,13 @@ class ElevenLabsTTS:
         self.default_voice = voice_id or None
         self.base_url = (base_url or "https://api.elevenlabs.io").rstrip("/")
         self.stability, self.similarity = stability, similarity
+        self.stt_model = os.environ.get("ELEVENLABS_STT_MODEL") or "scribe_v2"
         self.cache = cache_dir
         self.cache.mkdir(parents=True, exist_ok=True)
         self.http = httpx.AsyncClient(timeout=20, headers={"xi-api-key": api_key})
         self._voices: list[dict] | None = None
         self._voices_at = 0.0
+        self._voices_lock = asyncio.Lock()
 
     @classmethod
     def from_env(cls, data_dir: Path) -> "ElevenLabsTTS | None":
@@ -57,6 +60,10 @@ class ElevenLabsTTS:
 
     # ---------------------------------------------------------------- voices
     async def voices(self) -> list[dict]:
+        async with self._voices_lock:
+            return await self._load_voices()
+
+    async def _load_voices(self) -> list[dict]:
         if self._voices is not None and time.time() - self._voices_at < 600:
             return self._voices
         r = await self.http.get(f"{self.base_url}/v1/voices")
@@ -117,6 +124,22 @@ class ElevenLabsTTS:
         tmp.replace(path)
         self._prune()
         return audio, False
+
+    async def transcribe(self, audio: bytes, content_type: str) -> dict:
+        """Speech to text with Scribe (auto-detects the language, handles mixed EN/JP)."""
+        if len(audio) < 800:
+            return {"text": "", "language": None}
+        ext = {"audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "mp4", "audio/mpeg": "mp3", "audio/wav": "wav"}.get(
+            content_type.split(";")[0].strip(), "webm")
+        r = await self.http.post(
+            f"{self.base_url}/v1/speech-to-text",
+            data={"model_id": self.stt_model, "timestamps_granularity": "none"},
+            files={"file": (f"speech.{ext}", audio, content_type or "application/octet-stream")},
+        )
+        if r.status_code >= 400:
+            raise TTSError(f"ElevenLabs speech-to-text error {r.status_code}: {r.text[:200]}")
+        d = r.json()
+        return {"text": (d.get("text") or "").strip(), "language": d.get("language_code")}
 
     def _prune(self) -> None:
         files = [f for f in self.cache.rglob("*.mp3")]

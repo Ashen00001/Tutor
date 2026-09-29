@@ -11,10 +11,12 @@ from typing import Any, Callable, TypeVar
 
 from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
-from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
+import json
+
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 
 from . import grade
-from .ask import AskClient
+from .chat import SCENARIOS, ChatClient
 from .furigana import to_ruby_html
 from .store import EASE, TutorError, TutorStore
 from .sync import SyncManager
@@ -54,7 +56,7 @@ def _with_html(v: dict, store: TutorStore) -> dict:
     return v
 
 
-def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str, ask: AskClient | None,
+def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str, chat: ChatClient | None,
                  tts: ElevenLabsTTS | None = None) -> None:
     app_base, api = f"/app/{secret}", f"/api/{secret}"
 
@@ -92,8 +94,21 @@ def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str
     # --------------------------------------------------------------- api
     @mcp.custom_route(api + "/config", methods=["GET"])
     async def config(_: Request) -> Response:
-        return JSONResponse({"ask": ask is not None, "deck": store.deck_name, "sync": sync.enabled,
-                             "tts": {"provider": "elevenlabs", "model": tts.model} if tts else None})
+        return JSONResponse({"chat": chat is not None, "deck": store.deck_name, "sync": sync.enabled,
+                             "tts": {"provider": "elevenlabs", "model": tts.model} if tts else None,
+                             "stt": tts is not None, "scenarios": list(SCENARIOS)})
+
+    @mcp.custom_route(api + "/stt", methods=["POST"])
+    async def stt(req: Request) -> Response:
+        if tts is None:
+            return err(RuntimeError("Speech-to-text needs ELEVENLABS_API_KEY."), 404)
+        audio = await req.body()
+        if len(audio) > 10 * 1024 * 1024:
+            return err(ValueError("Recording too long."), 413)
+        try:
+            return JSONResponse(await tts.transcribe(audio, req.headers.get("content-type", "audio/webm")))
+        except TTSError as e:
+            return err(e, 502)
 
     @mcp.custom_route(api + "/tts", methods=["GET"])
     async def speak(req: Request) -> Response:
@@ -187,15 +202,21 @@ def register_web(mcp: FastMCP, store: TutorStore, sync: SyncManager, secret: str
             return d
         return JSONResponse(await run(go))
 
-    @mcp.custom_route(api + "/ask", methods=["POST"])
-    async def ask_route(req: Request) -> Response:
-        if ask is None:
-            return err(RuntimeError("Ask mode is off. Add ANTHROPIC_API_KEY to .env to turn it on."), 404)
+    @mcp.custom_route(api + "/chat", methods=["POST"])
+    async def chat_route(req: Request) -> Response:
+        if chat is None:
+            return err(RuntimeError("Conversation needs ANTHROPIC_API_KEY in the server's .env."), 404)
         b = await body(req)
         history = [m for m in (b.get("messages") or []) if isinstance(m, dict)]
-        try:
-            d = await ask.reply(history, b.get("card_id"))
-        except Exception as e:  # noqa: BLE001
-            return err(e, 502)
-        d["item"] = await run(lambda: decorate(d["item"], store))
-        return JSONResponse(d)
+        scenario = b.get("scenario") if b.get("scenario") in SCENARIOS else "free"
+        card_id = b.get("card_id") if isinstance(b.get("card_id"), int) else None
+
+        async def events():
+            try:
+                async for ev in chat.converse(history, scenario, card_id):
+                    yield json.dumps(ev, ensure_ascii=False) + "\n"
+            except Exception as e:  # noqa: BLE001
+                yield json.dumps({"t": "error", "message": str(e)}) + "\n"
+
+        return StreamingResponse(events(), media_type="application/x-ndjson",
+                                 headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})

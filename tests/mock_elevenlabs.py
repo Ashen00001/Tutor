@@ -52,6 +52,10 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.headers.get("xi-api-key") != "test-key":
             return self._json(401, {"detail": "bad key"})
+        if self.path.startswith("/v1/speech-to-text"):
+            n = int(self.headers.get("content-length", 0)); raw = self.rfile.read(n)
+            CALLS.append({"stt": True, "bytes": n, "has_model": b"scribe_v2" in raw})
+            return self._json(200, {"text": "I want some water", "language_code": "en", "language_probability": 0.97})
         if not self.path.startswith("/v1/text-to-speech/"):
             return self._json(404, {})
         body = json.loads(self.rfile.read(int(self.headers["content-length"])))

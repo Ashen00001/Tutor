@@ -43,19 +43,22 @@ def run(name: str, opts: dict, pw) -> None:
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     page.goto(BASE)
-    page.wait_for_selector(".welcome h1")
+    page.wait_for_selector(".hero-copy h1")
     shot(page, f"{name}-1-welcome")
     check(page.get_attribute("#muteBtn", "aria-pressed") == "true", "starts muted (remembered setting)")
 
-    page.click("#orbBtn")
-    page.wait_for_selector(".intro-grid .word")
-    n = page.locator(".intro-grid .word").count()
+    page.click("#goBtn")
+    page.wait_for_selector(".tiles .tile")
+    n = page.locator(".tiles .tile").count()
     check(n == 3, "intro shows 3 new words")
     shot(page, f"{name}-2-intro")
 
     page.click("#goQuiz")
     page.wait_for_selector(".prompt")
-    check(page.is_visible("#composer"), "composer visible during quiz")
+    check(page.is_visible("#dock"), "voice dock visible during quiz")
+    if not page.is_visible("#input"):
+        page.click("#kbBtn")
+    check(page.is_visible("#input"), "keyboard button opens the text box")
     check("みず" in page.inner_text(".prompt"), "first quiz is みず")
     shot(page, f"{name}-3-quiz")
 
@@ -79,9 +82,8 @@ def run(name: str, opts: dict, pw) -> None:
 
     page.fill("#input", "taberu")
     page.click("#sendBtn")
-    page.wait_for_selector("#heard")
-    page.wait_for_timeout(300)
-    check("what does it mean" in page.inner_text("#heard").lower(), "answering with the reading gets a nudge, not a fail")
+    page.wait_for_function("document.querySelector('#line') && document.querySelector('#line').innerText.toLowerCase().includes('what does it mean')")
+    check(True, "answering with the reading gets a nudge, not a fail")
     page.fill("#input", "eat")
     page.click("#sendBtn")
     page.wait_for_selector(".pill.correct")
@@ -91,7 +93,7 @@ def run(name: str, opts: dict, pw) -> None:
     page.click("#dunnoBtn")
     page.wait_for_selector(".pill.wrong")
     page.click("#rightBtn")
-    page.wait_for_selector(".welcome h1, .prompt", timeout=6000)
+    page.wait_for_selector(".hero-copy h1, .prompt", timeout=6000)
 
     page.click("#muteBtn")
     check(page.get_attribute("#muteBtn", "aria-pressed") == "false", "mute button toggles voice back on")
@@ -101,11 +103,12 @@ def run(name: str, opts: dict, pw) -> None:
     page.wait_for_selector("#sheet.open")
     page.wait_for_function("document.querySelector('#statsBox .stat b').innerText !== '–'")
     shot(page, f"{name}-6-menu")
-    page.click("#mAsk")
-    page.wait_for_selector("#sheet .empty-note")
-    check("ANTHROPIC_API_KEY" in page.inner_text("#sheet"), "ask sheet explains how to turn it on")
-    page.keyboard.press("Escape")
-    page.wait_for_timeout(350)
+    page.click("#mTalk")
+    page.wait_for_selector(".talk .note")
+    check("ANTHROPIC_API_KEY" in page.inner_text(".talk"), "talk mode explains how to turn it on when there's no key")
+    shot(page, f"{name}-6b-talk-off")
+    page.click("#endTalkBtn")
+    page.wait_for_selector(".prompt, .hero-copy h1")
 
     page.click("#menuBtn")
     page.wait_for_selector("#mEnd")
@@ -116,7 +119,7 @@ def run(name: str, opts: dict, pw) -> None:
     # horizontal overflow check
     overflow = page.evaluate("document.documentElement.scrollWidth > window.innerWidth")
     check(not overflow, "no horizontal scroll")
-    real_errors = [e for e in errors if "favicon" not in e]
+    real_errors = [e for e in errors if "favicon" not in e and "ERR_TUNNEL_CONNECTION_FAILED" not in e]  # fonts are blocked in the test sandbox
     check(not real_errors, f"no console errors {real_errors[:3]}")
     browser.close()
 

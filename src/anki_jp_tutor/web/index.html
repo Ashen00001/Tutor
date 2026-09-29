@@ -75,7 +75,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid rgba(255, 106, 26
 .glass-btn.lg svg { width: 22px; height: 22px; }
 .glass-btn[aria-pressed="true"] { color: var(--bad); }
 .progress { position: absolute; left: 56px; right: 56px; bottom: -8px; height: 3px; border-radius: 3px; background: rgba(255, 106, 26, .1); overflow: hidden; }
-body.hero .progress { opacity: 0; }
+body.hero .progress, body.talking .progress { opacity: 0; }
 .progress i { display: block; height: 100%; width: 0; border-radius: 3px; background: linear-gradient(90deg, var(--accent-soft), var(--accent)); transition: width .5s cubic-bezier(.2, .8, .2, 1); }
 
 /* stage */
@@ -216,6 +216,32 @@ ruby rt { font-size: .5em; color: var(--ink-2); }
 .switch[aria-checked="true"] { background: var(--accent); }
 .switch[aria-checked="true"]::after { transform: translateX(20px); }
 .menu-actions { display: grid; gap: 10px; margin-top: 18px; }
+
+/* talk mode */
+body.talking main { justify-content: flex-start; }
+body.talking .orb-btn { --orb: min(46vw, 24vh, 220px); }
+body.talking .view { flex: 1 1 auto; }
+.talk { width: 100%; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+.chips-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.chipbtn { height: 34px; padding: 0 14px; border-radius: 999px; font-size: 14px; font-weight: 700; white-space: nowrap; color: var(--ink-2);
+  background: var(--glass); border: 1px solid var(--glass-edge); box-shadow: 0 4px 12px rgba(120, 58, 24, .05); transition: background .2s, color .2s; }
+.chipbtn:hover { background: var(--glass-hi); }
+.chipbtn.on { color: #fff; border-color: transparent; background: linear-gradient(180deg, var(--accent-2), var(--accent)); }
+.convo { display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 10px; }
+.convo > :not(:nth-last-child(-n+2)) { opacity: .5; }
+.you { align-self: flex-end; max-width: 82%; padding: 9px 15px; border-radius: 20px 20px 6px 20px; font-size: 16px; font-weight: 600;
+  background: var(--glass-hi); border: 1px solid var(--glass-edge); box-shadow: var(--shadow); }
+.you.interim { color: var(--ink-3); }
+.bot { align-self: flex-start; max-width: 94%; font-size: 21px; line-height: 1.45; font-weight: 600; letter-spacing: -.005em; }
+.bot .sent { color: var(--ink-3); transition: color .2s; }
+.bot .sent.done, .bot .w.on { color: var(--ink); }
+.bot .ro { font-size: .6em; font-weight: 700; color: var(--accent-text); margin: 0 3px 0 1px; }
+.bot .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.tagchip { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.tagchip.ok { background: var(--ok-bg); color: var(--ok); }
+.tagchip.bad { background: var(--bad-bg); color: var(--bad); }
+.langpill { align-self: center; height: 30px; padding: 0 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--ink-2);
+  background: var(--glass); border: 1px solid var(--glass-edge); }
 .select { appearance: none; -webkit-appearance: none; max-width: 170px; height: 38px; padding: 0 30px 0 14px; border-radius: 999px; font-size: 15px; font-weight: 600; color: var(--ink);
   background: var(--glass-hi) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237a6961' stroke-width='2.2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 10px center / 14px;
   border: 1px solid var(--glass-edge); }
@@ -274,6 +300,7 @@ code { background: rgba(255, 106, 26, .1); padding: 1px 6px; border-radius: 6px;
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
       </button>
     </form>
+    <button id="langBtn" class="langpill" type="button" hidden>Mic: English</button>
     <div class="controls">
       <button id="kbBtn" class="glass-btn lg" type="button" aria-label="Type instead" title="Type">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="19" height="12" rx="3"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/></svg>
@@ -283,6 +310,9 @@ code { background: rgba(255, 106, 26, .1); padding: 1px 6px; border-radius: 6px;
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
         </button>
       </div>
+      <button id="endTalkBtn" class="glass-btn lg" type="button" aria-label="End conversation" title="End conversation" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
       <button id="hintBtn" class="glass-btn lg" type="button" aria-label="Hint" title="Hint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.3 1.1 2.2h5c0-.9.4-1.6 1.1-2.2A6 6 0 0 0 12 3z"/></svg>
       </button>
@@ -611,11 +641,11 @@ const TTS = {
 TTS.init();
 
 /* The spoken line: render segments as words that light up as they're spoken. */
-function speakLine(el, segs, hooks = {}) {
+function speakLine(el, segs, hooks = {}, quote = true) {
   if (!el) return TTS.speak(segs, hooks);
   el.classList.remove("heard");
-  el.innerHTML = "“" + segs.map((s, i) => `<span class="seg ${s.lang === "ja" ? "ja" : ""}" data-i="${i}">${
-    s.t.split(/(\s+)/).map(w => w.trim() ? `<span class="w">${esc(w)}</span>` : w).join("")}</span>`).join(" ") + "”";
+  el.innerHTML = (quote ? "“" : "") + segs.map((s, i) => `<span class="seg ${s.lang === "ja" ? "ja" : ""}" data-i="${i}">${
+    s.t.split(/(\s+)/).map(w => w.trim() ? `<span class="w">${esc(w)}</span>` : w).join("")}</span>`).join(" ") + (quote ? "”" : "");
   const words = i => [...el.querySelectorAll(`.seg[data-i="${i}"] .w`)];
   const light = (i, upto) => { let n = 0; for (const w of words(i)) { n += w.textContent.length + 1; if (upto === undefined || n <= upto + 1) w.classList.add("on"); } };
   return TTS.speak(segs, {
@@ -670,7 +700,7 @@ const S = {
   started: false, phase: "welcome", item: null, card: null, busy: false, hinted: false,
   done: 0, left: 0, stats: null, token: 0, typing: store.get("typing", false),
   handsFree: store.get("handsFree", false), romaji: store.get("romaji", false),
-  ask: { enabled: false, history: [] },
+  talk: { history: [], scenario: store.get("scenario", "free"), auto: store.get("autoListen", true), lang: "en-US", ctrl: null, speaker: null, listening: false },
 };
 const view = $("#view"), status = $("#status");
 
@@ -694,16 +724,20 @@ function updateMeta() {
   const total = S.done + S.left + (S.card ? 1 : 0);
   $("#bar").style.width = total ? `${Math.round(100 * S.done / total)}%` : "0";
 }
-function showDock(on) {
+function showDock(on, mode = "quiz") {
   $("#dock").hidden = !on;
   if (!on) return;
-  const voice = STT.ok;
+  const talk = mode === "talk";
+  const voice = talk ? !!talkVoice() : STT.ok;
+  $("#hintBtn").hidden = talk; $("#endTalkBtn").hidden = !talk;
+  $("#langBtn").hidden = !(talk && talkVoice() === "browser");
   $("#micWrap").hidden = !voice;
   $("#kbBtn").hidden = !voice;
   $(".controls").classList.toggle("solo", !voice);
   $("#form").hidden = voice && !S.typing;
   const i = $("#input"); i.value = ""; $("#sendBtn").disabled = true;
-  i.placeholder = S.card?.direction === "production" ? "Type it in kana or romaji" : "Type the meaning";
+  i.placeholder = talk ? "Say something, English or 日本語" : S.card?.direction === "production" ? "Type it in kana or romaji" : "Type the meaning";
+  $(".controls").classList.toggle("solo", !voice && !talk);
   if (!$("#form").hidden && matchMedia("(pointer: fine)").matches) setTimeout(() => i.focus({ preventScroll: true }), 60);
 }
 
@@ -712,9 +746,9 @@ function renderWelcome() {
   S.phase = "welcome"; layout("hero"); showDock(false);
   setStatus("");
   setView(`<div class="hero-copy"><h1>Talk <em>Japanese,</em><br>Casually.</h1>
-    <p>Three words at a time. Answer out loud, and the tutor talks back.</p>
-    <div class="row" style="max-width:340px;margin:22px auto 0"><button id="goBtn" class="btn primary">Get started</button></div></div>`);
-  $("#goBtn").onclick = start;
+    <p>Drill your words three at a time, or just talk. It listens, answers out loud, and remembers what you're learning.</p>
+    <div class="row" style="max-width:400px;margin:22px auto 0"><button id="talkBtn" class="btn ghost">Just talk</button><button id="goBtn" class="btn primary">Practice words</button></div></div>`);
+  $("#goBtn").onclick = start; $("#talkBtn").onclick = enterTalk;
 }
 
 function tileHTML(v, i) {
@@ -770,9 +804,10 @@ function renderEmpty() {
   S.phase = "empty"; S.card = null; S.left = 0; showDock(false); layout("hero"); updateMeta();
   setStatus("");
   setView(`<div class="hero-copy"><h1>All caught up.</h1><p>Nothing else is due right now.</p>
-    <div class="row" style="max-width:420px;margin:20px auto 0"><button id="endBtn" class="btn ghost">Done</button><button id="moreBtn" class="btn primary">+3 new words</button></div>
+    <div class="row" style="max-width:420px;margin:20px auto 0"><button id="talkBtn" class="btn ghost">Talk</button><button id="moreBtn" class="btn primary">+3 new words</button></div>
+    <button id="endBtn" class="textlink" type="button">End session</button>
     <div id="line" class="line"></div></div>`);
-  $("#moreBtn").onclick = moreWords; $("#endBtn").onclick = endSession;
+  $("#moreBtn").onclick = moreWords; $("#endBtn").onclick = endSession; $("#talkBtn").onclick = enterTalk;
   speakLine($("#line"), [{ t: "That's everything for now.", lang: "en" }]);
 }
 
@@ -787,8 +822,8 @@ function renderSummary(d) {
       <div class="stat"><b>${d.minutes}</b><span>minutes</span></div></div>
     ${d.missed.length ? `<div class="panel" style="margin-top:10px"><div class="kicker" style="margin-bottom:6px">Coming back first next time</div><div class="ja" style="font-size:24px;font-weight:700">${d.missed.map(esc).join("　")}</div></div>` : ""}
     <div id="line" class="line"></div>
-    <div class="row"><button id="againBtn" class="btn primary">Keep going</button></div></div>`);
-  $("#againBtn").onclick = () => { S.started = false; start(); };
+    <div class="row"><button id="talkBtn" class="btn ghost">Talk</button><button id="againBtn" class="btn primary">Keep going</button></div></div>`);
+  $("#againBtn").onclick = () => { S.started = false; start(); }; $("#talkBtn").onclick = enterTalk;
   speakLine($("#line"), [{ t: d.cards ? `Nice. ${d.right_first_try} out of ${d.cards} on the first try.` : "See you next time.", lang: "en" }]);
 }
 
@@ -812,13 +847,13 @@ function feedbackHTML(c, heard) {
 
 /* ----------------------------------------------------------------- flow */
 async function start() {
+  if (S.phase === "talk") { talkStop(); Mic.close(); document.body.classList.remove("talking"); }
   if (S.started) return;
   S.started = true; TTS.unlock();
   orb.set("thinking"); setStatus("Getting your words…", true);
   try {
-    const [cfg, d] = await Promise.all([api("/config").catch(() => ({})), api("/start", {})]);
-    S.ask.enabled = !!cfg.ask; S.stats = d.stats; S.done = 0; S.tts = cfg.tts || null;
-    if (S.tts) TTS.cloud = { voice: store.get("voice", null) };
+    const [, d] = await Promise.all([configReady, api("/start", {})]);
+    S.stats = d.stats; S.done = 0;
     orb.set("idle"); $("#orbBtn").setAttribute("aria-label", "Talk");
     if (d.unlocked) toast("Unlocked 3 new starter words");
     show(d.item);
@@ -828,6 +863,7 @@ async function start() {
 }
 
 function show(item) {
+  if (S.phase === "talk") { talkStop(); Mic.close(); document.body.classList.remove("talking"); }
   S.item = item; S.token++;
   if (!item || item.kind === "none") { S.started = false; return start(); }
   if (item.kind === "intro") return renderIntro(item);
@@ -920,9 +956,251 @@ async function moreWords() {
 }
 
 async function endSession() {
+  if (S.phase === "talk") { talkStop(); Mic.close(); document.body.classList.remove("talking"); }
   closeSheet(); TTS.stop(); STT.stop(); orb.set("thinking"); setStatus("Saving…", true);
   try { const d = await api("/end", {}); orb.set("idle"); S.started = false; renderSummary(d); }
   catch (e) { orb.set("idle"); toast(e.message); }
+}
+
+/* ----------------------------------------------------------------- talk
+   Full conversation: mic (voice-activity detection) -> speech-to-text -> Claude streams a reply ->
+   each sentence is spoken as soon as it's written -> listens again. Tap the orb to interrupt. */
+const SCEN = [["free", "Free talk"], ["konbini", "コンビニ"], ["friend", "New friend"], ["anime", "Anime"], ["ramen", "Ramen shop"]];
+const ROMA = /\[([a-zA-Z' .-]+)\]/g;
+const stripRomaji = t => t.replace(ROMA, "").replace(/\s+([,.!?])/g, "$1");
+const displayHTML = t => esc(t).replace(/\[([a-zA-Z' .-]+)\]/g, '<small class="ro">$1</small>');
+const T = S.talk;
+
+const Mic = {
+  stream: null, an: null, buf: null, stopNow: null, cancel: null,
+  async open() {
+    TTS.unlock();
+    if (!this.stream) this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    if (!this.an) {
+      const src = TTS.ctx.createMediaStreamSource(this.stream);
+      this.an = TTS.ctx.createAnalyser(); this.an.fftSize = 1024; this.buf = new Float32Array(1024);
+      src.connect(this.an);
+    }
+  },
+  level() {
+    if (!this.an) return 0;
+    this.an.getFloatTimeDomainData(this.buf);
+    let sum = 0; for (const v of this.buf) sum += v * v;
+    return Math.sqrt(sum / this.buf.length);
+  },
+  record({ silenceMs = 900, noSpeechMs = 7000, maxMs = 25000 } = {}) {
+    return new Promise(resolve => {
+      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"].find(t => window.MediaRecorder?.isTypeSupported?.(t));
+      const mr = new MediaRecorder(this.stream, mime ? { mimeType: mime } : undefined);
+      const chunks = []; mr.ondataavailable = e => e.data.size && chunks.push(e.data);
+      // Noise floor = slowly rising running minimum, so talking right away (or a noisy room) still works.
+      const t0 = performance.now(); let heard = false, last = t0, floor = 0.02, stopped = false;
+      const stop = () => { if (stopped) return; stopped = true; clearInterval(iv); this.stopNow = null; if (mr.state !== "inactive") mr.stop(); else finish(); };
+      let dropped = false;
+      const finish = () => resolve(!dropped && heard && chunks.length ? new Blob(chunks, { type: mr.mimeType || mime || "audio/webm" }) : null);
+      mr.onstop = finish;
+      const iv = setInterval(() => {
+        const now = performance.now(), lvl = this.level();
+        floor = Math.min(floor * 1.015, Math.max(lvl, 0.002));
+        const thresh = Math.max(0.015, floor * 3);
+        if (lvl > thresh) { heard = true; last = now; }
+        if ((heard && now - last > silenceMs) || (!heard && now - t0 > noSpeechMs) || now - t0 > maxMs) stop();
+      }, 50);
+      this.stopNow = () => { heard = heard || chunks.length > 0; stop(); };
+      this.cancel = () => { dropped = true; stop(); };
+      mr.start(100);
+    });
+  },
+  close() { this.cancel?.(); this.stream?.getTracks().forEach(t => t.stop()); this.stream = null; this.an = null; this.stopNow = null; this.cancel = null; },
+};
+
+function talkVoice() {
+  if (window.JPT_DEMO) return null;
+  if (S.sttCloud && navigator.mediaDevices?.getUserMedia && window.MediaRecorder) return "cloud";
+  return STT.ok ? "browser" : null;
+}
+const scrollConvo = () => { view.scrollTop = view.scrollHeight; };
+function tag(bot, text, kind) {
+  let box = bot.querySelector(".tags"); if (!box) { box = document.createElement("div"); box.className = "tags"; bot.appendChild(box); }
+  box.insertAdjacentHTML("beforeend", `<span class="tagchip ${kind}">${esc(text)}</span>`); scrollConvo();
+}
+function renderConvo() {
+  const c = $("#convo"); if (!c) return;
+  c.innerHTML = T.history.slice(-8).map(m => m.role === "user"
+    ? `<div class="you">${esc(m.content)}</div>` : `<div class="bot"><span class="sent done">${displayHTML(m.content)}</span></div>`).join("");
+  scrollConvo();
+}
+
+function enterTalk() {
+  closeSheet(); TTS.stop(); STT.stop(); TTS.unlock();
+  if (S.phase !== "talk") S.resume = (S.phase === "quiz" || S.phase === "feedback") ? S.item : null;
+  S.phase = "talk"; S.card = null; layout(""); document.body.classList.add("talking"); updateMeta();
+  setView(`<div class="talk">
+    <div class="chips-row" role="tablist" aria-label="Conversation topic">${SCEN.map(([k, l]) =>
+      `<button class="chipbtn ${k === T.scenario ? "on" : ""}" data-k="${k}" role="tab" aria-selected="${k === T.scenario}">${esc(l)}</button>`).join("")}</div>
+    <div id="convo" class="convo" aria-live="polite"></div></div>`);
+  view.querySelectorAll(".chipbtn").forEach(b => b.onclick = () => {
+    if (b.dataset.k === T.scenario) return;
+    talkStop(); T.scenario = b.dataset.k; store.set("scenario", T.scenario); T.history = []; enterTalk();
+  });
+  showDock(true, "talk");
+  renderConvo();
+  if (!S.chatEnabled) {
+    $("#convo").innerHTML = `<p class="note">Talking needs Claude on your server: add <code>ANTHROPIC_API_KEY=…</code> to the server's <code>.env</code> and run <code>docker compose up -d</code>. Haiku is the default model: fast and cheap.</p>`;
+    setStatus("", true); return;
+  }
+  if (!T.history.length) talkReply();
+  else setStatus(talkVoice() ? "Tap the mic to talk" : "Type to talk", true);
+}
+
+function talkStop() {
+  T.ctrl?.abort(); T.ctrl = null;
+  T.speaker?.cancel(); T.speaker = null;
+  T.listenGen = (T.listenGen || 0) + 1;
+  TTS.stop(); STT.rec?.abort?.(); STT.stop(); Mic.cancel?.();
+}
+
+function exitTalk() {
+  talkStop(); Mic.close(); orb.meter = null; T.listening = false;
+  document.body.classList.remove("talking"); $("#micWrap").classList.remove("on");
+  const it = S.resume; S.resume = null;
+  if (it && S.started) return show(it);
+  S.started = false; renderWelcome();
+}
+
+async function talkSend(text) {
+  text = (text || "").trim();
+  if (!text || S.phase !== "talk") return;
+  talkStop();
+  $("#convo .you.interim")?.remove();
+  T.history.push({ role: "user", content: text });
+  $("#convo").insertAdjacentHTML("beforeend", `<div class="you">${esc(text)}</div>`); scrollConvo();
+  const i = $("#input"); i.value = ""; $("#sendBtn").disabled = true;
+  await talkReply();
+}
+
+async function* chatStream(body, signal) {
+  const r = await fetch(API + "/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Server error ${r.status}`);
+  const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read(); if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let k; while ((k = buf.indexOf("\n")) >= 0) { const line = buf.slice(0, k).trim(); buf = buf.slice(k + 1); if (line) yield JSON.parse(line); }
+  }
+  if (buf.trim()) yield JSON.parse(buf);
+}
+
+class Speaker {
+  constructor(el) { this.el = el; this.buf = ""; this.q = []; this.playing = false; this.ended = false; this.dead = false; this.finished = new Promise(r => this.res = r); }
+  push(t) { this.buf += t; this.flush(false); }
+  end() { this.ended = true; this.flush(true); if (!this.playing && !this.q.length) this.res(); }
+  cancel() { this.dead = true; this.q = []; this.el.querySelectorAll(".sent").forEach(x => { x.classList.add("done"); }); this.res(); }
+  flush(final) {
+    const re = /[.!?]+["')\]]*\s+|[。！？]+[」』）]*\s*/g; let last = 0, m;
+    while ((m = re.exec(this.buf))) { this.add(this.buf.slice(last, m.index + m[0].length)); last = m.index + m[0].length; }
+    this.buf = this.buf.slice(last);
+    if (final && this.buf.trim()) { this.add(this.buf); this.buf = ""; }
+  }
+  add(sentence) {
+    if (!sentence.trim() || this.dead) return;
+    const span = document.createElement("span"); span.className = "sent"; span.innerHTML = displayHTML(sentence.trim());
+    const tags = this.el.querySelector(".tags"); this.el.insertBefore(span, tags); this.el.insertBefore(document.createTextNode(" "), tags);
+    scrollConvo();
+    const segs = splitLangs(stripRomaji(sentence.trim()));
+    if (!segs.length) { span.classList.add("done"); return; }
+    TTS.prefetch(segs);
+    this.q.push({ span, segs, sentence: sentence.trim() });
+    if (!this.playing) this.next();
+  }
+  async next() {
+    if (this.dead) return;
+    const it = this.q.shift();
+    if (!it) { this.playing = false; if (this.ended) this.res(); return; }
+    this.playing = true;
+    await speakLine(it.span, it.segs, {}, false);
+    if (this.dead) return;
+    it.span.innerHTML = displayHTML(it.sentence); it.span.classList.add("done");
+    this.next();
+  }
+}
+
+async function talkReply() {
+  const c = $("#convo"); if (!c) return;
+  const bot = document.createElement("div"); bot.className = "bot"; c.appendChild(bot); scrollConvo();
+  const ctrl = new AbortController(); T.ctrl = ctrl;
+  const sp = T.speaker = new Speaker(bot);
+  orb.set("thinking"); setStatus("Thinking…", true);
+  let full = "";
+  try {
+    const stream = window.JPT_DEMO_CHAT ? window.JPT_DEMO_CHAT(T.history, T.scenario)
+      : chatStream({ messages: T.history.slice(-16), scenario: T.scenario, card_id: S.resume?.card?.card_id }, ctrl.signal);
+    for await (const ev of stream) {
+      if (ctrl.signal.aborted) break;
+      if (ev.t === "delta") { sp.push(ev.text); setStatus("", true); }
+      else if (ev.t === "saved" && ev.words?.length) tag(bot, `Saved ${ev.words.join("、")}`, "ok");
+      else if (ev.t === "reviewed") tag(bot, ev.result === "again" ? `${ev.word} · review again` : `✓ ${ev.word} counted`, ev.result === "again" ? "bad" : "ok");
+      else if (ev.t === "error") throw new Error(ev.message);
+      else if (ev.t === "done") full = ev.text;
+    }
+    if (!ctrl.signal.aborted) { sp.end(); if (full) T.history.push({ role: "assistant", content: full }); await sp.finished; }
+  } catch (e) {
+    if (!ctrl.signal.aborted) { toast(e.message || "Couldn't get a reply", 3500); if (!bot.textContent.trim()) bot.remove(); }
+    sp.cancel();
+  }
+  if (T.ctrl === ctrl) T.ctrl = null;
+  if (ctrl.signal.aborted || S.phase !== "talk") return;
+  orb.set("idle");
+  if (T.auto && talkVoice()) talkListen();
+  else setStatus(talkVoice() ? "Tap the mic to talk" : "Type to talk", true);
+}
+
+async function talkListen() {
+  if (S.phase !== "talk" || T.listening) return;
+  const mode = talkVoice();
+  if (!mode) { S.typing = true; showDock(true, "talk"); $("#input").focus(); return; }
+  TTS.stop(); T.listening = true; $("#micWrap").classList.add("on"); orb.set("listening");
+  const gen = T.listenGen = (T.listenGen || 0) + 1;
+  const done = msg => { T.listening = false; $("#micWrap").classList.remove("on"); orb.meter = null; orb.set("idle"); if (msg) setStatus(msg, true); };
+  try {
+    let text = "";
+    if (mode === "cloud") {
+      setStatus("Listening…");
+      await Mic.open(); orb.meter = () => Mic.level();
+      const blob = await Mic.record();
+      orb.meter = null;
+      if (S.phase !== "talk" || gen !== T.listenGen) return done();
+      if (!blob) return done("Didn't hear anything. Tap the mic to talk");
+      orb.set("thinking"); setStatus("…", true);
+      const r = await fetch(API + "/stt", { method: "POST", headers: { "content-type": blob.type || "audio/webm" }, body: blob });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Speech-to-text failed");
+      if (gen !== T.listenGen) return done();
+      text = d.text;
+    } else {
+      setStatus(T.lang === "ja-JP" ? "Listening… (日本語)" : "Listening…");
+      const c = $("#convo");
+      const r = await STT.listen(T.lang, t => {
+        let el = c.querySelector(".you.interim");
+        if (!el) { c.insertAdjacentHTML("beforeend", `<div class="you interim"></div>`); el = c.querySelector(".you.interim"); }
+        el.textContent = t; scrollConvo();
+      });
+      text = r?.text || "";
+      if (gen !== T.listenGen) return done();
+    }
+    done();
+    if (!text.trim()) { $("#convo .you.interim")?.remove(); return setStatus("Didn't catch that. Tap the mic to try again", true); }
+    talkSend(text);
+  } catch (e) {
+    done("Type to talk");
+    const blocked = e?.name === "NotAllowedError" || e === "not-allowed" || e === "service-not-allowed";
+    toast(blocked ? "Mic is blocked. Allow it in the browser, or type instead." : (e?.message || String(e)), 3500);
+  }
+}
+
+function talkMic() {
+  if (T.listening) { Mic.stopNow?.(); STT.stop(); return; }  // done talking: send what was said
+  talkStop(); orb.set("idle"); talkListen();
 }
 
 /* ---------------------------------------------------------------- sheet */
@@ -948,11 +1226,11 @@ async function openMenu() {
     ${S.tts ? `<div class="toggle"><div>Voice<small>ElevenLabs · ${esc(S.tts.model)}</small></div>
       <div style="display:flex;gap:8px;align-items:center"><select id="voiceSel" class="select" aria-label="Voice"><option>Loading…</option></select>
       <button id="voiceTry" class="speak" aria-label="Preview voice">${ICON_SPEAK}</button></div></div>` : ""}
-    <div class="toggle"><div>Hands-free<small>Starts listening after each question</small></div>${sw("hfSw", S.handsFree)}</div>
+    <div class="toggle"><div>Hands-free<small>Starts listening after each question and reply</small></div>${sw("hfSw", S.handsFree)}</div>
     <div class="toggle"><div>Show romaji<small>Under the kana while you answer</small></div>${sw("roSw", S.romaji)}</div>
     <div class="toggle"><div>Type by default<small>Show the text box instead of the mic</small></div>${sw("tySw", S.typing)}</div>
     <div class="menu-actions">
-      <button id="mAsk" class="btn ghost">Ask the tutor</button>
+      <button id="mTalk" class="btn ghost">Talk with the tutor</button>
       <button id="mMore" class="btn ghost">+3 new words</button>
       <button id="mEnd" class="btn primary">End session</button>
     </div>
@@ -963,8 +1241,8 @@ async function openMenu() {
     if (key === "romaji" && S.phase === "quiz" && S.card?.direction === "recognition") { const h = $("#hint"); h.hidden = !on; if (on) h.textContent = S.card.romaji; }
     if (key === "typing" && S.phase === "quiz") showDock(true);
   };
-  toggle("hfSw", "handsFree"); toggle("roSw", "romaji"); toggle("tySw", "typing");
-  $("#mAsk").onclick = openAsk; $("#mMore").onclick = moreWords; $("#mEnd").onclick = endSession;
+  toggle("hfSw", "handsFree"); $("#hfSw").addEventListener("click", () => { S.talk.auto = S.handsFree; store.set("autoListen", S.handsFree); }); toggle("roSw", "romaji"); toggle("tySw", "typing");
+  $("#mTalk").onclick = enterTalk; $("#mMore").onclick = moreWords; $("#mEnd").onclick = endSession;
   if (S.tts) {
     api("/voices").then(v => {
       const cur = TTS.cloud.voice || v.default;
@@ -983,46 +1261,6 @@ async function openMenu() {
   } catch { $("#syncLine").textContent = "Couldn't load your stats"; }
 }
 
-function openAsk() {
-  if (!S.ask.enabled) {
-    openSheet(`<h2 id="sheetTitle">Ask the tutor ${X_BTN}</h2><p class="note">Ask mode uses Claude Haiku to answer questions and turn anime lines into cards. Turn it on by adding <code>ANTHROPIC_API_KEY=…</code> to the server's <code>.env</code>, then run <code>docker compose up -d</code>.<br><br>Until then, ask in the Claude app with the Japanese Tutor connector turned on.</p>`);
-    return;
-  }
-  openSheet(`<h2 id="sheetTitle">Ask the tutor ${X_BTN}</h2>
-    <div class="scroll" id="chatScroll"><div class="chat" id="chat">${S.ask.history.length ? "" : `<p class="note">Ask anything, like “why is it を and not は?”, or paste a line from a show and I'll save the useful words.</p>`}</div></div>
-    <form id="askForm" class="bar"><input id="askInput" placeholder="Ask or paste a line" autocomplete="off" enterkeyhint="send" aria-label="Ask the tutor">
-      <button id="askMic" class="send" type="button" aria-label="Ask by voice" ${STT.ok ? "" : "hidden"} style="background:var(--glass-hi);color:var(--accent-text);border:1px solid var(--glass-edge)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></button>
-      <button class="send" type="submit" aria-label="Send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button></form>`);
-  const chat = $("#chat");
-  for (const m of S.ask.history) chat.insertAdjacentHTML("beforeend", `<div class="msg ${m.role === "user" ? "user" : "bot"}">${esc(m.content)}</div>`);
-  const scroll = () => { const s = $("#chatScroll"); s.scrollTop = s.scrollHeight; };
-  scroll();
-  const send = async text => {
-    text = text.trim(); if (!text) return;
-    $("#askInput").value = ""; chat.querySelector(".note")?.remove();
-    S.ask.history.push({ role: "user", content: text });
-    chat.insertAdjacentHTML("beforeend", `<div class="msg user">${esc(text)}</div><div class="msg bot thinking" id="pending">Thinking…</div>`); scroll();
-    orb.set("thinking");
-    try {
-      const d = await api("/ask", { messages: S.ask.history.slice(-10), card_id: S.card?.card_id });
-      S.ask.history.push({ role: "assistant", content: d.reply });
-      const p = $("#pending"); p.classList.remove("thinking"); p.removeAttribute("id");
-      p.innerHTML = esc(d.reply) + (d.added?.length ? `<span class="added">Saved ${d.added.map(esc).join("、")} <button class="btn small ghost" id="quizNew">Quiz me</button></span>` : "");
-      if (d.item) $("#quizNew")?.addEventListener("click", () => { closeSheet(); show(d.item); });
-      scroll(); orb.set("idle");
-      TTS.speak(splitLangs(d.reply));
-    } catch (e) { $("#pending")?.remove(); orb.set("idle"); toast(e.message, 3500); }
-  };
-  $("#askForm").onsubmit = e => { e.preventDefault(); send($("#askInput").value); };
-  $("#askMic").onclick = async () => {
-    if (STT.on) return STT.stop();
-    TTS.stop(); orb.set("listening");
-    try { const r = await STT.listen("en-US", t => $("#askInput").value = t); if (r) send(r.text); }
-    catch (e) { toast(`Voice input error: ${e}`); }
-    finally { orb.set("idle"); }
-  };
-}
-
 /* ---------------------------------------------------------------- wiring */
 function setMuted(m) {
   TTS.muted = m; store.set("muted", m);
@@ -1033,17 +1271,24 @@ function setMuted(m) {
 $("#muteBtn").onclick = () => { setMuted(!TTS.muted); toast(TTS.muted ? "Voice off" : "Voice on", 1200); };
 $("#menuBtn").onclick = openMenu;
 $("#orbBtn").onclick = () => {
+  if (S.phase === "talk") return S.chatEnabled ? talkMic() : null;
   if (S.phase === "welcome" || S.phase === "summary") { S.started = false; return start(); }
   if (S.phase === "quiz") return STT.ok && !S.typing ? listen() : $("#input").focus();
   if (S.phase === "feedback") return $("#nextBtn")?.click();
   if (S.phase === "intro") return $("#goQuiz")?.click();
   if (S.phase === "empty") return moreWords();
 };
-$("#micBtn").onclick = listen;
-$("#kbBtn").onclick = () => { S.typing = !S.typing; showDock(true); if (S.typing) $("#input").focus(); };
+$("#micBtn").onclick = () => S.phase === "talk" ? talkMic() : listen();
+$("#endTalkBtn").onclick = exitTalk;
+$("#langBtn").onclick = () => { T.lang = T.lang === "en-US" ? "ja-JP" : "en-US"; $("#langBtn").textContent = T.lang === "en-US" ? "Mic: English" : "Mic: 日本語"; };
+$("#kbBtn").onclick = () => {
+  S.typing = !S.typing; showDock(true, S.phase === "talk" ? "talk" : "quiz");
+  if (S.phase === "quiz") setStatus(S.typing ? "" : "Tap the mic and answer", true);
+  if (S.typing) $("#input").focus();
+};
 $("#hintBtn").onclick = hint;
 $("#input").addEventListener("input", e => { $("#sendBtn").disabled = !e.target.value.trim(); });
-$("#form").onsubmit = e => { e.preventDefault(); const v = $("#input").value.trim(); if (v) submit(v); };
+$("#form").onsubmit = e => { e.preventDefault(); const v = $("#input").value.trim(); if (!v) return; S.phase === "talk" ? talkSend(v) : submit(v); };
 document.addEventListener("keydown", e => {
   const typing = e.target.matches("input, textarea");
   if (e.key === "Escape") return closeSheet();
@@ -1051,10 +1296,15 @@ document.addEventListener("keydown", e => {
   if (!typing && (e.key === "m" || e.key === "M")) { e.preventDefault(); $("#muteBtn").click(); }
   if (e.key === "Enter" && !typing && (S.phase === "feedback" || S.phase === "intro")) { e.preventDefault(); $("#orbBtn").click(); }
   if (e.key === " " && !typing && S.phase !== "welcome") { e.preventDefault(); $("#orbBtn").click(); }
+  if (e.key === "Escape" && S.phase === "talk" && $("#sheet").hidden) exitTalk();
 });
-document.addEventListener("visibilitychange", () => { if (document.hidden) { TTS.stop(); STT.stop(); } });
+document.addEventListener("visibilitychange", () => { if (document.hidden) { if (S.phase === "talk") talkStop(); TTS.stop(); STT.stop(); } });
 
 setMuted(TTS.muted);
+const configReady = api("/config").then(cfg => {
+  S.chatEnabled = !!cfg.chat; S.sttCloud = !!cfg.stt; S.tts = cfg.tts || null;
+  if (S.tts) TTS.cloud = { voice: store.get("voice", null) };
+}).catch(() => {});
 renderWelcome();
 if ("serviceWorker" in navigator && !window.JPT_DEMO) navigator.serviceWorker.register("sw.js").catch(() => {});
 </script>
