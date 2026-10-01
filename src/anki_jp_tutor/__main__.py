@@ -29,6 +29,20 @@ def _env_bool(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _load_dotenv(path: Path = Path(".env")) -> None:
+    """Read KEY=VALUE lines from ./.env when running outside Docker. Real env vars win."""
+    if not path.exists():
+        return
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
 def _secret(data: Path) -> str:
     s = os.environ.get("JP_TUTOR_SECRET", "").strip()
     if s:
@@ -47,6 +61,7 @@ def main() -> None:
     args = ap.parse_args()
 
     logging.basicConfig(level=logging.INFO, stream=sys.stderr, format="%(asctime)s %(name)s %(message)s")
+    _load_dotenv()
 
     data = Path(os.environ.get("JP_TUTOR_DATA", "./data")).resolve()
     data.mkdir(parents=True, exist_ok=True)
