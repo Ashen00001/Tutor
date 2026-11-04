@@ -5,3 +5,10 @@ __pycache__/
 build/
 *.zip
 tests/*.png
+
+# local launchers and server logs (never commit)
+server.log
+server.out.log
+*.log
+*.url
+Start tutor.cmd
